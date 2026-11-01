@@ -141,10 +141,15 @@ fun FilesScreen() {
                         Text(f.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         if (f.isFile) Text(humanSize(f.length()), style = MaterialTheme.typography.bodySmall)
                     }
-                    if (f.isFile && f.name.endsWith(".zip")) {
+                    val isTar = f.name.endsWith(".tar.gz") || f.name.endsWith(".tgz") ||
+                        f.name.endsWith(".tar.xz") || f.name.endsWith(".tar")
+                    if (f.isFile && (f.name.endsWith(".zip") || isTar)) {
                         IconButton(onClick = {
                             scope.launch(Dispatchers.IO) {
-                                runCatching { Zips.unzip(f) { Zips.safeResolve(cwd, it) } }
+                                runCatching {
+                                    if (isTar) Extractor.extractTar(f, cwd)
+                                    else Zips.unzip(f) { Zips.safeResolve(cwd, it) }
+                                }
                                     .onSuccess { tick++; toast(ctx, "Di-unzip") }
                                     .onFailure { toast(ctx, "Unzip gagal: ${it.message}") }
                             }

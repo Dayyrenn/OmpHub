@@ -85,6 +85,9 @@ object Prefs {
     var dbEnabled: Boolean
         get() = sp.getBoolean("dbEnabled", true)
         set(v) = sp.edit().putBoolean("dbEnabled", v).apply()
+    var autoSetupTried: Boolean
+        get() = sp.getBoolean("autoSetupTried", false)
+        set(v) = sp.edit().putBoolean("autoSetupTried", v).apply()
 }
 
 /**

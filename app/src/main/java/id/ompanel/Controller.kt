@@ -224,7 +224,7 @@ object Controller {
         }
     }
 
-    fun installGameRootfs() = runSetup("Pasang rootfs game (Debian i386)") {
+    private fun doInstallGameRootfs() {
         check(gameState.value == RunState.STOPPED) { "Hentikan server dulu" }
         val archive = File(Env.dlDir, "rootfs-game.tar.gz")
         setupLog.add("Mengunduh i386/debian:bookworm-slim dari Docker Hub")
@@ -246,14 +246,39 @@ object Controller {
         ensureGameDeps { setupLog.add(it) }
     }
 
-    fun installOpenMp() = runSetup("Pasang / update open.mp") {
+    private fun doInstallOpenMp() {
         check(gameState.value == RunState.STOPPED) { "Hentikan server dulu" }
         OpenMpInstaller.install(Prefs.urlOpenMp) { setupLog.add(it) }
     }
 
-    fun installDb() = runSetup("Pasang MariaDB") {
+    private fun doInstallDb() {
         check(dbState.value == RunState.STOPPED) { "Hentikan MariaDB dulu" }
         MariaDb.install(Prefs.urlAlpine) { setupLog.add(it) }
+    }
+
+    fun installGameRootfs() = runSetup("Pasang rootfs game (Debian i386)") { doInstallGameRootfs() }
+    fun installOpenMp() = runSetup("Pasang / update open.mp") { doInstallOpenMp() }
+    fun installDb() = runSetup("Pasang MariaDB") { doInstallDb() }
+
+    /** Pasang semua komponen yang belum ada, berurutan: rootfs game, open.mp, lalu MariaDB (bila aktif). */
+    fun installAll() = runSetup("Pasang semua komponen") {
+        check(Env.binariesOk()) { "Binary proot/qemu belum ada di APK" }
+        check(gameState.value == RunState.STOPPED && dbState.value == RunState.STOPPED) { "Hentikan server dulu" }
+        refreshStatus()
+        if (!setupStatus.value.gameRootfs) doInstallGameRootfs()
+        refreshStatus()
+        if (!setupStatus.value.openMp) doInstallOpenMp()
+        refreshStatus()
+        if (Prefs.dbEnabled && !setupStatus.value.db) doInstallDb()
+    }
+
+    /** Dipanggil saat app dibuka: pasang otomatis satu kali bila komponen belum lengkap. */
+    fun autoSetupOnFirstLaunch() {
+        refreshStatus()
+        val st = setupStatus.value
+        if (Prefs.autoSetupTried || st.ready || !st.binaries) return
+        Prefs.autoSetupTried = true
+        installAll()
     }
 
     /** Uji cepat: jalankan `uname -a` di dalam rootfs. */

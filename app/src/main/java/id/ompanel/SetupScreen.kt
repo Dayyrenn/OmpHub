@@ -68,6 +68,9 @@ fun SetupScreen() {
                     style = MaterialTheme.typography.bodySmall
                 )
             }
+            Button(onClick = { Controller.installAll() }, enabled = !busy && game == RunState.STOPPED && st.binaries) {
+                Text("Pasang semua (otomatis)")
+            }
             Text(mark(st.gameRootfs) + "Rootfs game (Debian i386)")
             Button(onClick = { Controller.installGameRootfs() }, enabled = !busy && game == RunState.STOPPED && st.binaries) {
                 Text(if (st.gameRootfs) "Pasang ulang rootfs" else "1. Pasang rootfs game")
