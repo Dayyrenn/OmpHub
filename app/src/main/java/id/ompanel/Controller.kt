@@ -55,6 +55,24 @@ object Controller {
         )
     }
 
+    // ---------- Library tambahan untuk rootfs game ----------
+
+    private const val ATOMIC_LIB = "usr/lib/i386-linux-gnu/libatomic.so.1"
+
+    fun gameDepsOk() = File(Env.rootfsGame, ATOMIC_LIB).exists()
+
+    /** Pasang library tambahan yang dibutuhkan omp-server di rootfs Debian slim. */
+    fun ensureGameDeps(log: (String) -> Unit) {
+        if (gameDepsOk()) return
+        log("Memasang library tambahan di rootfs (libatomic1), butuh beberapa menit...")
+        val script = "export DEBIAN_FRONTEND=noninteractive; " +
+            "apt-get -o APT::Sandbox::User=root update && " +
+            "apt-get -o APT::Sandbox::User=root install -y --no-install-recommends libatomic1"
+        val r = Proot.build(Proot.Target.GAME, listOf("/bin/sh", "-c", script)).runAndCapture(900)
+        log(r.output.takeLast(1500))
+        check(r.ok && gameDepsOk()) { "Gagal memasang libatomic1 (exit ${r.exit})" }
+    }
+
     // ---------- Server game (open.mp) ----------
 
     suspend fun startGame(): Unit = withContext(Dispatchers.IO) {
@@ -71,6 +89,8 @@ object Controller {
         }
         gameState.value = RunState.STARTING
         try {
+            ensureGameDeps { gameLog.add(it) }
+
             // Sinkronkan port & pastikan RCON aktif dengan password kuat
             val cfg = OpenMpConfig(File(Env.serverDir, "config.json")).load()
             cfg.port = Prefs.port
@@ -223,6 +243,7 @@ object Controller {
         }
         Proot.writeNetConfig(Env.rootfsGame)
         archive.delete()
+        ensureGameDeps { setupLog.add(it) }
     }
 
     fun installOpenMp() = runSetup("Pasang / update open.mp") {
