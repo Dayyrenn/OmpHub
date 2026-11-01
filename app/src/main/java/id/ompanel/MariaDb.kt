@@ -93,10 +93,12 @@ object MariaDb {
     fun start(onLine: (String) -> Unit, onExit: (Int) -> Unit) {
         if (proc?.isAlive == true) return
         check(installed && initialized) { "MariaDB belum terpasang (tab Setup)" }
-        val cmd = "export TMPDIR=/tmp; mkdir -p /tmp /run/mysqld && exec mariadbd --user=root --datadir=/var/lib/mysql " +
-            "--bind-address=127.0.0.1 --port=${Prefs.dbPort} --socket=$SOCK " +
-            "--pid-file=/run/mysqld/mysqld.pid --skip-name-resolve --innodb-use-native-aio=0 " +
-            "--performance-schema=OFF --innodb-buffer-pool-size=32M --max-connections=30"
+        val cmd = "mkdir -p /tmp /run/mysqld && " +
+        "sed -i 's/^skip-networking/#skip-networking/' /etc/my.cnf.d/*.cnf 2>/dev/null; " +
+        "exec mariadbd --user=root --datadir=/var/lib/mysql " +
+        "--bind-address=127.0.0.1 --port=${Prefs.dbPort} --socket=$SOCK " +
+        "--pid-file=/run/mysqld/mysqld.pid --skip-name-resolve --innodb-use-native-aio=0 " +
+        "--performance-schema=OFF --innodb-buffer-pool-size=32M --max-connections=30"
         val pb = Proot.build(Proot.Target.DB, listOf("/bin/sh", "-c", cmd), "/", binds)
         pb.redirectErrorStream(true)
         val p = pb.start()
