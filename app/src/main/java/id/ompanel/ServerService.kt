@@ -45,7 +45,7 @@ class ServerService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         createChannel()
-        startForeground(NOTIF_ID, notification("OmpPanel aktif"))
+        startForeground(NOTIF_ID, notification("OmpHub aktif"))
         if (wake == null) {
             val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
             wake = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ompanel:server").apply { acquire() }
@@ -111,7 +111,7 @@ class ServerService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_notif)
-            .setContentTitle("OmpPanel")
+            .setContentTitle("OmpHub")
             .setContentText(text)
             .setContentIntent(open)
             .setOngoing(true)

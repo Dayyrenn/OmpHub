@@ -49,7 +49,7 @@ fun DashboardScreen() {
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text(
-            "OmpPanel",
+            "OmpHub",
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp)
         )

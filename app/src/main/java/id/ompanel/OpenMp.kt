@@ -122,7 +122,7 @@ object OpenMpInstaller {
         // Config awal bila belum ada
         val cfgFile = File(Env.serverDir, "config.json")
         val cfg = OpenMpConfig(cfgFile).load()
-        if (!cfgFile.exists()) { cfg.hostName = "OmpPanel Server"; cfg.maxPlayers = 50 }
+        if (!cfgFile.exists()) { cfg.hostName = "OmpHub Server"; cfg.maxPlayers = 50 }
         cfg.port = Prefs.port
         cfg.rconEnabled = true
         if (cfg.ensureStrongRcon()) log("Password RCON baru di-generate (lihat Files > config.json)")

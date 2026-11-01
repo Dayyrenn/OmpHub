@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "OmpPanel"
+rootProject.name = "OmpHub"
 include(":app")
