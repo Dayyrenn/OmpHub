@@ -49,6 +49,11 @@ termux_deb libtalloc
 T="$WORK/libtalloc/data/data/com.termux/files/usr/lib"
 cp -L "$(ls "$T"/libtalloc.so* | head -n1)" "$DEST/libtalloc.so"
 
+# proot Termux versi baru butuh libandroid-shmem.so (emulasi System V shared memory)
+termux_deb libandroid-shmem
+S="$WORK/libandroid-shmem/data/data/com.termux/files/usr/lib"
+cp -L "$(ls "$S"/libandroid-shmem.so* | head -n1)" "$DEST/libandroid-shmem.so"
+
 # ---------------------------------------------------------------------------
 # qemu-i386 (Debian arm64)
 # Versi Debian terbaru (qemu 10.x) tidak lagi menyertakan binary asli di paket
@@ -108,6 +113,17 @@ if command -v file >/dev/null; then
 fi
 
 if command -v readelf >/dev/null; then
-  echo; echo ">> Dependency libproot.so (harus hanya libc/libdl/libm/libtalloc):"
-  readelf -d "$DEST/libproot.so" | grep NEEDED || true
+  echo; echo ">> Cek dependency (harus ada di APK atau berupa library sistem Android):"
+  SYS=" libc.so libdl.so libm.so liblog.so libz.so "
+  MISSING=0
+  for so in "$DEST"/*.so; do
+    case "$(basename "$so")" in libqemu-i386.so|libproot-loader.so) continue ;; esac
+    for need in $(readelf -d "$so" | sed -n 's/.*Shared library: \[\(.*\)\]/\1/p'); do
+      if [ -f "$DEST/$need" ] || [[ "$SYS" == *" $need "* ]]; then continue; fi
+      echo "   KURANG: $(basename "$so") butuh $need"
+      MISSING=1
+    done
+  done
+  [ "$MISSING" = 0 ] || { echo "Ada dependency yang belum disertakan di APK"; exit 1; }
+  echo "   semua dependency terpenuhi"
 fi
