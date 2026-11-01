@@ -64,13 +64,19 @@ object MariaDb {
     private fun initDataDir(log: (String) -> Unit) {
         Env.dbData.mkdirs()
         if (initialized) return
+        // bersihkan sisa percobaan yang gagal
+        Env.dbData.listFiles()?.forEach { deleteTree(it) }
         log("Inisialisasi database...")
         val r = sh(
-            "mkdir -p /run/mysqld && mariadb-install-db --user=root --datadir=/var/lib/mysql " +
-                "--skip-test-db --auth-root-authentication-method=normal"
+            "mkdir -p /run/mysqld /tmp && mariadb-install-db --user=root --datadir=/var/lib/mysql " +
+                "--skip-test-db --auth-root-authentication-method=normal --skip-name-resolve " +
+                "--innodb-use-native-aio=0 --innodb-buffer-pool-size=32M --verbose"
         )
-        log(r.output.takeLast(500))
-        check(r.ok && initialized) { "mariadb-install-db gagal (exit ${r.exit})" }
+        log(r.output.takeLast(3000))
+        if (!(r.ok && initialized)) {
+            Env.dbData.listFiles()?.forEach { deleteTree(it) }
+            error("mariadb-install-db gagal (exit ${r.exit}), lihat log di atas")
+        }
     }
 
     // ---------- Jalan / berhenti ----------
