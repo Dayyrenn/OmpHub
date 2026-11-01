@@ -30,7 +30,11 @@ object MariaDb {
     val initialized: Boolean get() = File(Env.dbData, "mysql").isDirectory
 
     private fun sh(script: String, timeoutSec: Long = 300): CmdResult =
-        Proot.build(Proot.Target.DB, listOf("/bin/sh", "-c", script), "/", binds).runAndCapture(timeoutSec)
+    Proot.build(
+        Proot.Target.DB,
+        listOf("/bin/sh", "-c", "export TMPDIR=/tmp; mkdir -p /tmp; $script"),
+        "/", binds
+    ).runAndCapture(timeoutSec)
 
     // ---------- Instalasi ----------
 
@@ -89,7 +93,7 @@ object MariaDb {
     fun start(onLine: (String) -> Unit, onExit: (Int) -> Unit) {
         if (proc?.isAlive == true) return
         check(installed && initialized) { "MariaDB belum terpasang (tab Setup)" }
-        val cmd = "mkdir -p /run/mysqld && exec mariadbd --user=root --datadir=/var/lib/mysql " +
+        val cmd = "export TMPDIR=/tmp; mkdir -p /tmp /run/mysqld && exec mariadbd --user=root --datadir=/var/lib/mysql " +
             "--bind-address=127.0.0.1 --port=${Prefs.dbPort} --socket=$SOCK " +
             "--pid-file=/run/mysqld/mysqld.pid --skip-name-resolve --innodb-use-native-aio=0 " +
             "--performance-schema=OFF --innodb-buffer-pool-size=32M --max-connections=30"
