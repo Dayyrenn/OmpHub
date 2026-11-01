@@ -1,4 +1,4 @@
-package id.ompanel
+package id.omphub
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

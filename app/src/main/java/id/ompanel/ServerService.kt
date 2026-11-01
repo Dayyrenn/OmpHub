@@ -1,4 +1,4 @@
-package id.ompanel
+package id.omphub
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -22,11 +22,11 @@ import java.util.concurrent.atomic.AtomicInteger
 /** Foreground service: menjaga proses open.mp & MariaDB tetap hidup saat app di background. */
 class ServerService : Service() {
     companion object {
-        const val ACTION_START = "id.ompanel.START"
-        const val ACTION_STOP = "id.ompanel.STOP"
-        const val ACTION_RESTART = "id.ompanel.RESTART"
-        const val ACTION_START_DB = "id.ompanel.START_DB"
-        const val ACTION_STOP_DB = "id.ompanel.STOP_DB"
+        const val ACTION_START = "id.omphub.START"
+        const val ACTION_STOP = "id.omphub.STOP"
+        const val ACTION_RESTART = "id.omphub.RESTART"
+        const val ACTION_START_DB = "id.omphub.START_DB"
+        const val ACTION_STOP_DB = "id.omphub.STOP_DB"
         private const val CHANNEL = "ompanel"
         private const val NOTIF_ID = 1
 

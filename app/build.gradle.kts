@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "id.ompanel"
+    namespace = "id.omphub"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "id.ompanel"
+        applicationId = "id.omphub"
         minSdk = 26
         // PENTING: targetSdk 28 disengaja. Android 10+ melarang exec dari folder data app
         // untuk app yang targetSdk >= 29, dan PRoot butuh itu. Sama seperti Termux.

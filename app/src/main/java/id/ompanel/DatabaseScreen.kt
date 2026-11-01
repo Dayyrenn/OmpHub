@@ -1,4 +1,4 @@
-package id.ompanel
+package id.omphub
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult

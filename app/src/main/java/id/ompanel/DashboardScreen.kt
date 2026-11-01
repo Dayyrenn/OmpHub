@@ -1,4 +1,4 @@
-package id.ompanel
+package id.omphub
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

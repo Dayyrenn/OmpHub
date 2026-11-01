@@ -1,4 +1,4 @@
-package id.ompanel
+package id.omphub
 
 import android.content.ClipData
 import android.content.ClipboardManager

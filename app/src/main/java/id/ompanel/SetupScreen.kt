@@ -1,4 +1,4 @@
-package id.ompanel
+package id.omphub
 
 import android.content.Intent
 import android.net.Uri
