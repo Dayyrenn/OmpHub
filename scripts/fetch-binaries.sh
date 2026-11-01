@@ -5,7 +5,7 @@
 #   libproot.so         <- proot (paket Termux)
 #   libproot-loader.so  <- loader proot (paket Termux)
 #   libtalloc.so        <- dependency proot (paket Termux)
-#   libqemu-x86_64.so   <- qemu-x86_64-static (paket Debian qemu-user-static, arm64)
+#   libqemu-x86_64.so   <- qemu-x86_64-static (paket Debian qemu-user-static, amd64)
 #
 # Butuh: curl ar tar awk (Linux/macOS/WSL/GitHub Actions).
 set -euo pipefail
@@ -49,10 +49,11 @@ termux_deb libtalloc
 T="$WORK/libtalloc/data/data/com.termux/files/usr/lib"
 cp -L "$(ls "$T"/libtalloc.so* | head -n1)" "$DEST/libtalloc.so"
 
-echo ">> qemu-user-static (Debian arm64)"
+# PERBAIKAN: Mengubah pencarian paket dari _arm64.deb menjadi _amd64.deb agar berisi qemu-x86_64-static
+echo ">> qemu-user-static (Debian amd64)"
 BASE="https://deb.debian.org/debian/pool/main/q/qemu"
-DEB=$(curl -fsSL "$BASE/" | grep -o 'qemu-user-static_[^"]*_arm64\.deb' | sort -uV | tail -n1)
-[ -n "$DEB" ] || { echo "qemu-user-static arm64 tidak ditemukan di $BASE"; exit 1; }
+DEB=$(curl -fsSL "$BASE/" | grep -o 'qemu-user-static_[^"]*_amd64\.deb' | sort -uV | tail -n1)
+[ -n "$DEB" ] || { echo "qemu-user-static amd64 tidak ditemukan di $BASE"; exit 1; }
 echo "   $DEB"
 curl -fsSL "$BASE/$DEB" -o "$WORK/qemu.deb"
 mkdir -p "$WORK/qemu"
