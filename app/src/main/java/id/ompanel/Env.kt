@@ -113,7 +113,10 @@ object Proot {
             "-r", rootfs.absolutePath,
             "-w", workDir
         )
-        if (target == Target.GAME) args += listOf("-q", Env.nativeLib("libqemu-i386.so").absolutePath)
+        if (target == Target.GAME) {
+            // -B: alamat dasar memori tamu. Tanpa ini qemu mulai dari 0x1000 dan ditolak kernel Android.
+            args += listOf("-q", Env.nativeLib("libqemu-i386.so").absolutePath + " -B 0x100000")
+        }
         args += listOf("-b", "/dev", "-b", "/proc")
         binds.forEach { (host, guest) -> args += listOf("-b", "$host:$guest") }
 
@@ -121,6 +124,7 @@ object Proot {
             "/usr/bin/env",
             "-u", "LD_LIBRARY_PATH", "-u", "PROOT_LOADER", "-u", "PROOT_TMP_DIR", "-u", "PROOT_NO_SECCOMP",
             "HOME=/root",
+            "TMPDIR=/tmp",
             "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
             "TERM=xterm",
             "LANG=C.UTF-8"
