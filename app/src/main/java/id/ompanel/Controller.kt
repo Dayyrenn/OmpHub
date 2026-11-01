@@ -206,11 +206,10 @@ object Controller {
 
     fun installGameRootfs() = runSetup("Pasang rootfs game (Debian i386)") {
         check(gameState.value == RunState.STOPPED) { "Hentikan server dulu" }
-        val url = Prefs.urlGameRootfs
-        val archive = File(Env.dlDir, archiveNameFor("rootfs-game", url))
-        setupLog.add("Mengunduh $url")
+        val archive = File(Env.dlDir, "rootfs-game.tar.gz")
+        setupLog.add("Mengunduh i386/debian:bookworm-slim dari Docker Hub")
         var lastPct = -1
-        downloadFile(url, archive) { done, total ->
+        DockerHub.downloadRootfs("i386/debian", "bookworm-slim", archive) { done, total ->
             if (total > 0) {
                 val pct = (done * 100 / total).toInt() / 20 * 20
                 if (pct != lastPct) { lastPct = pct; setupLog.add("  unduh $pct%") }
