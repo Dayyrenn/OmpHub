@@ -137,9 +137,9 @@ object Extractor {
     }
 
     /**
-     * Ekstrak tar / tar.gz / tar.xz dengan symlink dan permission yang benar (penting untuk rootfs).
-     * Device node (/dev/*) dilewati; PRoot menyediakan /dev sendiri lewat bind.
-     */
+    * Ekstrak tar / tar.gz / tar.xz dengan symlink dan permission yang benar (penting untuk rootfs).
+    * Device node di folder /dev dilewati; PRoot menyediakan /dev sendiri lewat bind.
+    */
     fun extractTar(archive: File, dest: File, strip: Int = 0, onProgress: (Int) -> Unit = {}) {
         dest.mkdirs()
         val base = dest.toPath().normalize()
