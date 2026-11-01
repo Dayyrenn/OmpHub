@@ -13,7 +13,7 @@ android {
         minSdk = 26
         // PENTING: targetSdk 28 disengaja. Android 10+ melarang exec dari folder data app
         // untuk app yang targetSdk >= 29, dan PRoot butuh itu. Sama seperti Termux.
-        targetSdk = 28
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
         ndk { abiFilters += "arm64-v8a" }
