@@ -51,7 +51,9 @@ cp -L "$(ls "$T"/libtalloc.so* | head -n1)" "$DEST/libtalloc.so"
 
 # libproot.so meminta "libtalloc.so.2", padahal Android hanya mengekstrak file berakhiran .so.
 # Ganti nama dependensinya jadi "libtalloc.so" (dipadatkan dengan NUL supaya panjang string tetap sama).
-perl -0777 -pi -e 's/libtalloc\.so\.2\0/libtalloc.so\0\0/g' "$DEST/libproot.so"
+SZ_BEFORE=$(wc -c < "$DEST/libproot.so")
+perl -0777 -pi -e 's/libtalloc\.so\.2\0/libtalloc.so\0\0\0/g' "$DEST/libproot.so"
+[ "$(wc -c < "$DEST/libproot.so")" = "$SZ_BEFORE" ] || { echo "Patch mengubah ukuran libproot.so, dibatalkan"; exit 1; }
 
 # proot Termux versi baru butuh libandroid-shmem.so (emulasi System V shared memory)
 termux_deb libandroid-shmem
