@@ -16,7 +16,7 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$DEST"
 
-for t in curl ar tar awk find od; do
+for t in curl ar tar awk find od perl; do
   command -v "$t" >/dev/null || { echo "Butuh '$t'"; exit 1; }
 done
 
@@ -48,6 +48,10 @@ cp -L "$P/libexec/proot/loader" "$DEST/libproot-loader.so"
 termux_deb libtalloc
 T="$WORK/libtalloc/data/data/com.termux/files/usr/lib"
 cp -L "$(ls "$T"/libtalloc.so* | head -n1)" "$DEST/libtalloc.so"
+
+# libproot.so meminta "libtalloc.so.2", padahal Android hanya mengekstrak file berakhiran .so.
+# Ganti nama dependensinya jadi "libtalloc.so" (dipadatkan dengan NUL supaya panjang string tetap sama).
+perl -0777 -pi -e 's/libtalloc\.so\.2\0/libtalloc.so\0\0/g' "$DEST/libproot.so"
 
 # proot Termux versi baru butuh libandroid-shmem.so (emulasi System V shared memory)
 termux_deb libandroid-shmem
