@@ -5,9 +5,9 @@
 #   libproot.so         <- proot (paket Termux)
 #   libproot-loader.so  <- loader proot (paket Termux)
 #   libtalloc.so        <- dependency proot (paket Termux)
-#   libqemu-x86_64.so   <- qemu-x86_64-static (paket Debian qemu-user-static, amd64)
+#   libqemu-i386.so     <- qemu-i386-static (paket Debian qemu-user-static, arm64)
 #
-# Butuh: curl ar tar awk (Linux/macOS/WSL/GitHub Actions).
+# Butuh: curl ar tar awk find (Linux/macOS/WSL/GitHub Actions).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -16,7 +16,7 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$DEST"
 
-for t in curl ar tar awk; do
+for t in curl ar tar awk find; do
   command -v "$t" >/dev/null || { echo "Butuh '$t'"; exit 1; }
 done
 
@@ -49,21 +49,42 @@ termux_deb libtalloc
 T="$WORK/libtalloc/data/data/com.termux/files/usr/lib"
 cp -L "$(ls "$T"/libtalloc.so* | head -n1)" "$DEST/libtalloc.so"
 
-# PERBAIKAN: Mengubah pencarian paket dari _arm64.deb menjadi _amd64.deb agar berisi qemu-x86_64-static
-echo ">> qemu-user-static (Debian amd64)"
+echo ">> qemu-user-static (Debian arm64)"
 BASE="https://deb.debian.org/debian/pool/main/q/qemu"
-DEB=$(curl -fsSL "$BASE/" | grep -o 'qemu-user-static_[^"]*_amd64\.deb' | sort -uV | tail -n1)
-[ -n "$DEB" ] || { echo "qemu-user-static amd64 tidak ditemukan di $BASE"; exit 1; }
+DEB=$(curl -fsSL "$BASE/" | grep -o 'qemu-user-static_[^"]*_arm64\.deb' | sort -uV | tail -n1)
+[ -n "$DEB" ] || { echo "qemu-user-static arm64 tidak ditemukan di $BASE"; exit 1; }
 echo "   $DEB"
 curl -fsSL "$BASE/$DEB" -o "$WORK/qemu.deb"
 mkdir -p "$WORK/qemu"
-( cd "$WORK/qemu" && ar x ../qemu.deb && tar xf data.tar.* ./usr/bin/qemu-x86_64-static )
-cp "$WORK/qemu/usr/bin/qemu-x86_64-static" "$DEST/libqemu-x86_64.so"
+# Ekstrak SEMUA isi paket. Di Debian baru, /usr/bin/qemu-i386-static hanyalah symlink
+# ke /usr/libexec/qemu-binfmt/i386-binfmt-P, jadi mengekstrak satu path saja menghasilkan
+# symlink yang putus (penyebab error "cannot stat").
+( cd "$WORK/qemu" && ar x ../qemu.deb && tar xf data.tar.* )
+
+# Prioritaskan file asli (bukan symlink), lalu fallback ke symlink.
+Q=$(find "$WORK/qemu" -type f \( -name 'i386-binfmt-P' -o -name 'qemu-i386-static' -o -name 'qemu-i386' \) | head -n1)
+if [ -z "$Q" ]; then
+  Q=$(find "$WORK/qemu" -type l \( -name 'qemu-i386-static' -o -name 'qemu-i386' \) | head -n1)
+fi
+if [ -z "$Q" ]; then
+  echo "qemu-i386 tidak ketemu di dalam $DEB. Isi yang berkaitan:"
+  find "$WORK/qemu" -name '*i386*'
+  find "$WORK/qemu/usr/bin" 2>/dev/null | head -50
+  exit 1
+fi
+echo "   ditemukan: ${Q#$WORK/qemu}"
+cp -L "$Q" "$DEST/libqemu-i386.so"
 
 chmod 755 "$DEST"/*.so
 echo
 echo ">> Selesai:"
 ls -la "$DEST"
+
+if command -v file >/dev/null; then
+  echo; echo ">> Cek arsitektur (harus ARM aarch64):"
+  file "$DEST"/*.so
+fi
+
 if command -v readelf >/dev/null; then
   echo; echo ">> Dependency libproot.so (harus hanya libc/libdl/libm/libtalloc):"
   readelf -d "$DEST/libproot.so" | grep NEEDED || true
