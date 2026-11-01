@@ -5,7 +5,7 @@
 #   libproot.so         <- proot (paket Termux)
 #   libproot-loader.so  <- loader proot (paket Termux)
 #   libtalloc.so        <- dependency proot (paket Termux)
-#   libqemu-i386.so     <- qemu-i386-static (paket Debian qemu-user-static, arm64)
+#   libqemu-x86_64.so   <- qemu-x86_64-static (paket Debian qemu-user-static, arm64)
 #
 # Butuh: curl ar tar awk (Linux/macOS/WSL/GitHub Actions).
 set -euo pipefail
@@ -56,8 +56,8 @@ DEB=$(curl -fsSL "$BASE/" | grep -o 'qemu-user-static_[^"]*_arm64\.deb' | sort -
 echo "   $DEB"
 curl -fsSL "$BASE/$DEB" -o "$WORK/qemu.deb"
 mkdir -p "$WORK/qemu"
-( cd "$WORK/qemu" && ar x ../qemu.deb && tar xf data.tar.* ./usr/bin/qemu-i386-static )
-cp "$WORK/qemu/usr/bin/qemu-i386-static" "$DEST/libqemu-i386.so"
+( cd "$WORK/qemu" && ar x ../qemu.deb && tar xf data.tar.* ./usr/bin/qemu-x86_64-static )
+cp "$WORK/qemu/usr/bin/qemu-x86_64-static" "$DEST/libqemu-x86_64.so"
 
 chmod 755 "$DEST"/*.so
 echo
