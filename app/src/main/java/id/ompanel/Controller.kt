@@ -211,10 +211,10 @@ object Controller {
         if (setupBusy.value) return
         setupBusy.value = true
         scope.launch {
-            setupLog.add("== $title ==")
+            setupLog.add("( $title )")
             try {
                 block()
-                setupLog.add("[ok] $title selesai")
+                setupLog.add("[Sukses] $title selesai")
             } catch (e: Throwable) {
                 setupLog.add("[ERROR] ${e.message ?: e}")
             } finally {
