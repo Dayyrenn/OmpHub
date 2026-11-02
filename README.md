@@ -158,8 +158,8 @@ Mesin server hanya bisa diganti saat server berhenti.
 | Komponen | Default |
 |---|---|
 | open.mp (Linux x86, `.tar.gz`) | rilis terbaru di `github.com/openmultiplayer/open.mp` |
-| SA-MP 0.3.7 server Linux (`.tar.gz`) | `samp037svr_R2-2-1.tar.gz` dari `sa-mp.co.id/files` (situs komunitas, bukan situs resmi SA-MP) |
-| SA-MP 0.3.DL server Linux (`.tar.gz`) | `samp03DLsvr_R1.tar.gz` dari `sa-mp.co.id/files` |
+| SA-MP 0.3.7 server Linux (`.tar.gz`) | `samp037svr_R2-2-1.tar.gz` dari `sa-mp.co.id/files` (situs komunitas SAMP Indo) |
+| SA-MP 0.3.DL server Linux (`.tar.gz`) | `samp03DLsvr_R1.tar.gz` dari `sa-mp.co.id/files` (situs komunitas SAMP Indo) |
 | Alpine aarch64 minirootfs (`.tar.gz`) | Alpine 3.20.3 |
 
 URL server game dipakai saat menekan tombol **Unduh** / **Update** di tab Setup. Tidak ada server game yang dibundel di APK.
