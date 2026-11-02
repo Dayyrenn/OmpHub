@@ -1,6 +1,7 @@
 package id.omphub
 
 import android.net.Uri
+import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.horizontalScroll
@@ -15,8 +16,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -142,6 +144,22 @@ fun DatabaseScreen() {
                 OutlinedButton(onClick = { ServerService.send(ctx, ServerService.ACTION_STOP_DB) }, enabled = dbState == RunState.RUNNING) { Text("Stop") }
                 IconButton(onClick = { refreshDatabases() }, enabled = dbState == RunState.RUNNING && !busy) { Icon(Icons.Default.Refresh, "Refresh") }
             }
+            OutlinedButton(
+                onClick = {
+                    val phpMyAdminUrl = "http://127.0.0.1:8080/phpmyadmin/"
+                    val browserIntent = Intent(Intent.ACTION_VIEW, Uri.parse(phpMyAdminUrl))
+                    ctx.startActivity(Intent.createChooser(browserIntent, "Buka phpMyAdmin dengan browser"))
+                },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.OpenInBrowser, contentDescription = null)
+                Text("  Buka phpMyAdmin di Browser")
+            }
+            Text(
+                "Alamat: http://127.0.0.1:8080/phpmyadmin/ · Pastikan layanan web phpMyAdmin sudah berjalan.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             if (busy) CircularProgressIndicator()
             if (error.isNotBlank()) Text(error, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
         }
