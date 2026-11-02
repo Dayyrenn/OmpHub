@@ -118,8 +118,12 @@ object Controller {
             gameStartedAt = SystemClock.elapsedRealtime()
             gameState.value = RunState.RUNNING
             thread(name = "omp-log", isDaemon = true) {
-                p.inputStream.bufferedReader().forEachLine { gameLog.add(it) }
-                val code = p.waitFor()
+                try {
+                    p.inputStream.bufferedReader().forEachLine { gameLog.add(it) }
+                } catch (_: java.io.IOException) {
+                    // stream ditutup saat proses di-destroy, abaikan
+                }
+                val code = runCatching { p.waitFor() }.getOrDefault(-1)
                 gameLog.add("[panel] ${type.binary} berhenti (exit $code)")
                 gameProc = null
                 gameStdin = null

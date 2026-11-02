@@ -111,8 +111,11 @@ object MariaDb {
         val p = pb.start()
         proc = p
         thread(name = "mariadb-log", isDaemon = true) {
-            p.inputStream.bufferedReader().forEachLine(onLine)
-            val code = p.waitFor()
+            try {
+                p.inputStream.bufferedReader().forEachLine(onLine)
+            } catch (_: java.io.IOException) {
+            }
+            val code = runCatching { p.waitFor() }.getOrDefault(-1)
             proc = null
             onExit(code)
         }

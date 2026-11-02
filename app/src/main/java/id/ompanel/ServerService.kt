@@ -64,6 +64,8 @@ class ServerService : Service() {
                     ACTION_START_DB -> Controller.startDb()
                     ACTION_STOP_DB -> Controller.stopDb()
                 }
+            } catch (e: Throwable) {
+                Controller.gameLog.add("[panel] Error: ${e.message}")
             } finally {
                 busy.decrementAndGet()
                 maybeStop()

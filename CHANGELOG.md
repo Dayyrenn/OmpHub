@@ -9,9 +9,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.0.0/).
 - Info perangkat: RAM HP, baterai, suhu, status termal, trafik jaringan, ruang penyimpanan, dan waktu respons query server.
 
 ### Diubah
-- Server game (open.mp, SA-MP 0.3.7, SA-MP 0.3.DL) tidak lagi dibundel di APK dan tidak dipasang otomatis. User mengunduhnya dari tab Setup atau mengunggah sendiri lewat tab Files.
-- Pemasangan otomatis dan tombol "Pasang semua" kini hanya memasang rootfs game dan MariaDB.
-- `scripts/fetch-binaries.sh` tidak lagi mengunduh server game; ukuran APK mengecil.
+- `scripts/fetch-binaries.sh` kini mengambil `qemu-user-static` dan `libatomic1` dari Ubuntu, sebelumnya dari Debian.
 
 ## [1.1.0] - 2026-11-02
 
