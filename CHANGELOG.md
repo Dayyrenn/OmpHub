@@ -1,6 +1,6 @@
 # Changelog
 
-Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/).
+Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.0.0/).
 
 ## [Belum dirilis]
 

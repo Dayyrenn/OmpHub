@@ -48,20 +48,18 @@ data class PerfSnapshot(
     val diskTotalB: Long = 0
 )
 
-/** Ambil PID dari [Process]. API 33+ pakai Process.pid(), di bawahnya lewat reflection. */
+/** Ambil PID dari [Process] lewat reflection (method pid() di API 33+, field pid di versi lama). */
 fun pidOf(p: Process?): Int? {
     if (p == null) return null
-    return try {
-        if (Build.VERSION.SDK_INT >= 33) {
-            p.pid().toInt()
-        } else {
-            val f = p.javaClass.getDeclaredField("pid")
-            f.isAccessible = true
-            f.getInt(p)
-        }
-    } catch (_: Throwable) {
-        null
+    runCatching {
+        val m = p.javaClass.getMethod("pid")
+        return (m.invoke(p) as Number).toInt()
     }
+    return runCatching {
+        val f = p.javaClass.getDeclaredField("pid")
+        f.isAccessible = true
+        f.getInt(p)
+    }.getOrNull()
 }
 
 /**
