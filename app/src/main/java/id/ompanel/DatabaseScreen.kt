@@ -15,8 +15,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Database
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.TableChart
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -151,7 +151,7 @@ fun DatabaseScreen() {
                 if (databases.isEmpty()) Text("Belum ada database atau gagal memuat daftar.", style = MaterialTheme.typography.bodySmall)
                 databases.forEach { name ->
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Database, null, tint = MaterialTheme.colorScheme.primary)
+                        Icon(Icons.Default.Storage, null, tint = MaterialTheme.colorScheme.primary)
                         FilterChip(
                             selected = selectedDb == name,
                             onClick = { selectedDb = name; selectedTable = ""; refreshTables(name) },
