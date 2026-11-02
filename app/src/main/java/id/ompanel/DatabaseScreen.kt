@@ -83,14 +83,6 @@ fun DatabaseScreen() {
     val setup by Controller.setupStatus.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
-    // Saat halaman Database dibuka, hidupkan MariaDB. startDb() juga
-    // menyiapkan phpMyAdmin setelah koneksi database siap.
-    LaunchedEffect(setup.db) {
-        if (setup.db && Controller.dbState.value == RunState.STOPPED) {
-            Controller.startDb()
-        }
-    }
-
     var busy by remember { mutableStateOf(false) }
     var operation by remember { mutableStateOf("") }
 
@@ -197,6 +189,38 @@ fun DatabaseScreen() {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            androidx.compose.material3.Button(
+                onClick = {
+                    scope.launch { Controller.startDb() }
+                },
+                enabled = setup.db && dbState == RunState.STOPPED,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(if (dbState == RunState.STARTING) "Menyalakan..." else "Nyalakan MariaDB")
+            }
+            OutlinedButton(
+                onClick = {
+                    scope.launch { Controller.stopDb() }
+                },
+                enabled = dbState == RunState.RUNNING,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text("Matikan MariaDB")
+            }
+        }
+
+        if (!setup.db) {
+            Text(
+                "MariaDB belum terpasang. Selesaikan instalasi melalui tab Setup terlebih dahulu.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             OutlinedButton(
                 onClick = { importer.launch(arrayOf("application/sql", "application/x-sql", "text/plain", "*/*")) },
                 enabled = dbReady && !busy,
@@ -231,7 +255,7 @@ fun DatabaseScreen() {
                     Text(
                         if (!setup.db) "MariaDB/phpMyAdmin belum terpasang. Pasang melalui tab Setup."
                         else if (dbState == RunState.STARTING) "MariaDB sedang dijalankan..."
-                        else "MariaDB belum siap. Periksa log Database jika proses start gagal.",
+                        else "Tekan Nyalakan MariaDB untuk membuka phpMyAdmin.",
                         modifier = Modifier.padding(20.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
