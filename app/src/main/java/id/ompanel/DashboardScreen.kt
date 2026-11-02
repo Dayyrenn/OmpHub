@@ -81,7 +81,7 @@ fun DashboardScreen() {
                 Text("OmpHub", style = MaterialTheme.typography.headlineMedium)
                 Text("Server control center", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text("v1.1", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            Text("v1.1.4", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
         }
 
         Card(
