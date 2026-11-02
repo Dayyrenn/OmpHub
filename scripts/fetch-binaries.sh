@@ -154,7 +154,8 @@ case "$DATA" in
         tar -xf "$DATA" -C "$WORK/atomic/content"
         tar -C "$WORK/atomic/content" -cJf "$ASSETS/libatomic1-i386.tar.xz" . ;;
 esac
-tar -tJf "$ASSETS/libatomic1-i386.tar.xz" | grep -q 'libatomic\.so\.1' || { echo "libatomic.so.1 tidak ada di arsip"; exit 1; }
+tar -tJf "$ASSETS/libatomic1-i386.tar.xz" > "$WORK/atomic.list"
+grep -q 'libatomic\.so\.1' "$WORK/atomic.list" || { echo "libatomic.so.1 tidak ada di arsip"; cat "$WORK/atomic.list"; exit 1; }
 
 # --- Server game ---
 echo ">> Server game (bundel APK)"

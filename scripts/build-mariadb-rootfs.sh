@@ -19,6 +19,8 @@ docker run --platform linux/arm64 --name "$NAME" alpine:3.20 \
 echo ">> export + kompres"
 docker export "$NAME" | xz -T0 -6 > "$ASSETS/mariadb-rootfs.tar.xz"
 
-tar -tJf "$ASSETS/mariadb-rootfs.tar.xz" | grep -q 'usr/bin/mariadbd$' \
-  || { echo "mariadbd tidak ada di rootfs hasil build"; exit 1; }
+LIST="$(mktemp)"
+tar -tJf "$ASSETS/mariadb-rootfs.tar.xz" > "$LIST"
+grep -q 'usr/bin/mariadbd$' "$LIST" || { echo "mariadbd tidak ada di rootfs hasil build"; exit 1; }
+rm -f "$LIST"
 ls -la "$ASSETS/mariadb-rootfs.tar.xz"
