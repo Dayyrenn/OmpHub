@@ -15,7 +15,7 @@ jobs:
           java-version: 17
       - name: Ambil binary proot/qemu + rootfs game
         env:
-          QEMU_VERSION: "10.0.2 ~bpo12"
+          QEMU_VERSION: "10.0.2"
         run: bash scripts/fetch-binaries.sh
       - uses: docker/setup-qemu-action@v3
         with:
