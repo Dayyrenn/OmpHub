@@ -132,7 +132,6 @@ object SampInstaller {
         deleteTree(tmp)
         tmp.mkdirs()
 
-        // SA-MP tidak dibundel di APK: selalu diunduh dari URL di Setup (atau diunggah manual lewat tab Files).
         val archive = File(Env.dlDir, archiveNameFor("samp", url))
         log("Mengunduh server SA-MP ${version.label} dari $url")
         var lastPct = -1

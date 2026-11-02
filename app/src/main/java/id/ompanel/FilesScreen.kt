@@ -76,7 +76,7 @@ fun FilesScreen() {
     var editing by remember { mutableStateOf<File?>(null) }
     var editText by remember { mutableStateOf("") }
     var toDelete by remember { mutableStateOf<File?>(null) }
-    var newName by remember { mutableStateOf<Boolean?>(null) } // true = folder, false = file
+    var newName by remember { mutableStateOf<Boolean?>(null) }
     var nameInput by remember { mutableStateOf("") }
 
     val entries = remember(cwd, tick) {
@@ -163,7 +163,6 @@ fun FilesScreen() {
         }
     }
 
-    // Editor teks layar penuh
     editing?.let { file ->
         Dialog(onDismissRequest = { editing = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
             Surface(Modifier.fillMaxSize()) {

@@ -1,9 +1,3 @@
-#!/usr/bin/env bash
-# Membuat rootfs Alpine arm64 + mariadb yang dibundel ke APK:
-#   app/src/main/assets/mariadb-rootfs.tar.xz
-#
-# Butuh docker dengan emulasi arm64 (di GitHub Actions: docker/setup-qemu-action).
-# Versi Alpine harus sama dengan DEF_ALPINE di Env.kt (3.20).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"

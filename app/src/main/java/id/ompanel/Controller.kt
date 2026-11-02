@@ -51,8 +51,6 @@ object Controller {
     @Volatile private var runningType = ServerType.OMP
     @Volatile private var gameStdin: BufferedWriter? = null
 
-    // ---------- Status ----------
-
     fun refreshStatus() {
         setupStatus.value = SetupStatus(
             binaries = Env.binariesOk(),
@@ -63,8 +61,6 @@ object Controller {
             engine = Prefs.serverType
         )
     }
-
-    // ---------- Library tambahan untuk rootfs game ----------
 
     private const val ATOMIC_LIB = "usr/lib/i386-linux-gnu/libatomic.so.1"
 
@@ -82,8 +78,6 @@ object Controller {
         check(r.ok && gameDepsOk()) { "Gagal memasang libatomic1 (exit ${r.exit})" }
     }
 
-    // ---------- Server game (open.mp) ----------
-
     suspend fun startGame(): Unit = withContext(Dispatchers.IO) {
         if (gameProc?.isAlive == true) return@withContext
         refreshStatus()
@@ -99,10 +93,8 @@ object Controller {
         }
         gameState.value = RunState.STARTING
         try {
-            // libatomic1 hanya dibutuhkan omp-server
             if (type == ServerType.OMP) ensureGameDeps { gameLog.add(it) }
 
-            // Sinkronkan port & pastikan RCON aktif dengan password kuat
             syncServerConfig(type)
             OpenMpInstaller.fixPerms()
 
@@ -134,7 +126,6 @@ object Controller {
     suspend fun stopGame(): Unit = withContext(Dispatchers.IO) {
         val p = gameProc ?: run { gameState.value = RunState.STOPPED; return@withContext }
         gameState.value = RunState.STOPPING
-        // Server SA-MP Linux tidak membaca stdin, jadi dihentikan lewat RCON
         if (runningType == ServerType.SAMP) runCatching { rcon("exit") }
         else runCatching { gameStdin?.apply { write("exit\n"); flush() } }
         if (!p.waitFor(8, TimeUnit.SECONDS)) {
@@ -146,7 +137,6 @@ object Controller {
     fun sendStdin(line: String) {
         gameLog.add("> $line")
         if (runningType == ServerType.SAMP && gameProc?.isAlive == true) {
-            // Server SA-MP Linux tidak membaca stdin; perintah dikirim lewat RCON
             val out = rcon(line)
             if (out.isEmpty()) gameLog.add("[rcon] tidak ada balasan (RCON mati / password salah / server mati)")
             out.forEach { gameLog.add(it) }
@@ -185,8 +175,6 @@ object Controller {
             }
         }
     }
-
-    // ---------- MariaDB ----------
 
     suspend fun startDb(): Unit = withContext(Dispatchers.IO) {
         if (dbState.value == RunState.RUNNING || dbState.value == RunState.STARTING) return@withContext
@@ -228,8 +216,6 @@ object Controller {
         dbState.value = RunState.STOPPED
     }
 
-    // ---------- Gabungan ----------
-
     suspend fun startAll() {
         if (Prefs.dbEnabled) {
             refreshStatus()
@@ -242,8 +228,6 @@ object Controller {
         stopGame()
         stopDb()
     }
-
-    // ---------- Setup / instalasi ----------
 
     private fun runSetup(title: String, block: () -> Unit) {
         if (setupBusy.value) return
@@ -264,13 +248,10 @@ object Controller {
 
     private fun doInstallGameRootfs() {
         check(gameState.value == RunState.STOPPED) { "Hentikan server dulu" }
-        // Ekstrak ke folder sementara lalu di-rename, supaya rootfs setengah jadi
-        // (app ditutup / dibunuh di tengah jalan) tidak pernah dianggap sudah terpasang.
         val staging = File(Env.rootfsGame.parentFile, "game.tmp")
         deleteTree(staging)
         val archive = File(Env.dlDir, "rootfs-game.tar.gz")
 
-        // 1) Pakai rootfs yang dibundel di APK (tanpa internet). Kalau tidak ada, unduh dari Docker Hub.
         var lastCount = 0
         val onEntry: (Int) -> Unit = { n ->
             if (n - lastCount >= 1000) { lastCount = n; setupLog.add("  $n entri") }
@@ -306,7 +287,6 @@ object Controller {
 
         deleteTree(Env.rootfsGame)
         check(staging.renameTo(Env.rootfsGame)) { "Gagal memindahkan rootfs ke lokasi akhir" }
-        // No-op bila libatomic1 sudah ada (dari APK); kalau belum, dipasang lewat apt (butuh internet).
         ensureGameDeps { setupLog.add(it) }
     }
 
@@ -373,8 +353,6 @@ object Controller {
         setupLog.add(r.output.trim().ifEmpty { "(tanpa output)" })
         check(r.ok) { "PRoot gagal, lihat output di atas" }
     }
-
-    // ---------- Backup / restore ----------
 
     fun listBackups(): List<File> =
         Env.backupDir.listFiles { f -> f.isFile && f.name.endsWith(".zip") }?.sortedByDescending { it.lastModified() }

@@ -1,20 +1,3 @@
-#!/usr/bin/env bash
-# Mengambil binary arm64 yang dibutuhkan dan menaruhnya di app/src/main/jniLibs/arm64-v8a/
-# Nama harus lib*.so supaya Android mengekstraknya ke nativeLibraryDir (satu-satunya tempat yang boleh di-exec).
-#
-#   libproot.so         <- proot (paket Termux)
-#   libproot-loader.so  <- loader proot (paket Termux)
-#   libtalloc.so        <- dependency proot (paket Termux)
-#   libqemu-i386.so     <- qemu-i386-static (paket Debian qemu-user-static, arm64)
-#
-# Juga menyiapkan aset yang dibundel di APK (app/src/main/assets/):
-#   rootfs-game.tar.gz, libatomic1-i386.tar.xz
-# (mariadb-rootfs.tar.xz dibuat oleh scripts/build-mariadb-rootfs.sh)
-#
-# Server game (open.mp / SA-MP) SENGAJA tidak dibundel: user mengunduhnya dari tab Setup
-# atau mengunggah sendiri lewat tab Files.
-#
-# Butuh: curl ar tar awk find od perl xz jq (Linux/macOS/WSL/GitHub Actions).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -56,30 +39,19 @@ termux_deb libtalloc
 T="$WORK/libtalloc/data/data/com.termux/files/usr/lib"
 cp -L "$(ls "$T"/libtalloc.so* | head -n1)" "$DEST/libtalloc.so"
 
-# libproot.so meminta "libtalloc.so.2", padahal Android hanya mengekstrak file berakhiran .so.
-# Ganti nama dependensinya jadi "libtalloc.so" (dipadatkan dengan NUL supaya panjang string tetap sama).
 SZ_BEFORE=$(wc -c < "$DEST/libproot.so")
 perl -0777 -pi -e 's/libtalloc\.so\.2\0/libtalloc.so\0\0\0/g' "$DEST/libproot.so"
 [ "$(wc -c < "$DEST/libproot.so")" = "$SZ_BEFORE" ] || { echo "Patch mengubah ukuran libproot.so, dibatalkan"; exit 1; }
 
-# proot Termux versi baru butuh libandroid-shmem.so (emulasi System V shared memory)
 termux_deb libandroid-shmem
 S="$WORK/libandroid-shmem/data/data/com.termux/files/usr/lib"
 cp -L "$(ls "$S"/libandroid-shmem.so* | head -n1)" "$DEST/libandroid-shmem.so"
 
-# ---------------------------------------------------------------------------
-# qemu-i386 (Debian arm64)
-# Versi Debian terbaru (qemu 10.x) tidak lagi menyertakan binary asli di paket
-# qemu-user-static: /usr/bin/qemu-i386-static hanya symlink yang putus.
-# Jadi coba paket dari yang terbaru ke yang lebih lama, dan pakai yang pertama
-# berisi binary ELF aarch64 yang benar-benar ada.
-# ---------------------------------------------------------------------------
 echo ">> qemu-user-static (Debian arm64)"
 BASE="https://deb.debian.org/debian/pool/main/q/qemu"
 LIST=$(curl -fsSL "$BASE/" | grep -o 'qemu-user-static_[^"]*_arm64\.deb' | sort -uV | tac)
 [ -n "$LIST" ] || { echo "qemu-user-static arm64 tidak ditemukan di $BASE"; exit 1; }
 
-# true jika file ELF dengan arsitektur aarch64 (e_machine = 0xB7)
 is_arm64_elf() {
   [ "$(head -c4 "$1" 2>/dev/null | od -An -c | tr -d ' ')" = '177ELF' ] || return 1
   [ "$(od -An -tx1 -j18 -N1 "$1" | tr -d ' ')" = "b7" ]
@@ -97,7 +69,6 @@ for DEB in $LIST; do
   ( cd "$WORK/qemu" && ar x ../qemu.deb && tar xf data.tar.* ) || continue
 
   while IFS= read -r Q; do
-    # -f mengikuti symlink, jadi symlink putus otomatis dilewati
     if [ -f "$Q" ] && is_arm64_elf "$Q"; then
       FOUND="$Q"
       break
@@ -115,14 +86,9 @@ done
 [ -n "$FOUND" ] || { echo "Tidak ada paket qemu-user-static arm64 yang berisi binary qemu-i386 yang valid"; exit 1; }
 cp -L "$FOUND" "$DEST/libqemu-i386.so"
 
-# ---------------------------------------------------------------------------
-# Aset yang dibundel di APK supaya semuanya terpasang otomatis tanpa internet
-# saat app dibuka pertama kali.
-# ---------------------------------------------------------------------------
 ASSETS="$ROOT/app/src/main/assets"
 mkdir -p "$ASSETS"
 
-# --- Rootfs Debian i386 (layer dari Docker Hub, tanpa docker) ---
 echo ">> Rootfs Debian i386 (bundel APK, dari Docker Hub)"
 REPO="i386/debian"; TAG="bookworm-slim"
 REG="https://registry-1.docker.io/v2/$REPO"
@@ -140,7 +106,6 @@ LAYER=$(echo "$MANIFEST" | jq -r '.layers[0].digest')
 dh "$REG/blobs/$LAYER" -o "$ASSETS/rootfs-game.tar.gz"
 tar -tzf "$ASSETS/rootfs-game.tar.gz" >/dev/null || { echo "rootfs-game.tar.gz rusak"; exit 1; }
 
-# --- libatomic1 i386 (dibutuhkan omp-server), diekstrak di atas rootfs oleh app ---
 echo ">> libatomic1 i386 (bundel APK)"
 GCC_POOL="https://deb.debian.org/debian/pool/main/g/gcc-12"
 ATOMIC_DEB=$(curl -fsSL "$GCC_POOL/" | grep -o 'libatomic1_12[^"]*_i386\.deb' | sort -uV | tail -n1)
@@ -158,8 +123,6 @@ case "$DATA" in
 esac
 tar -tJf "$ASSETS/libatomic1-i386.tar.xz" > "$WORK/atomic.list"
 grep -q 'libatomic\.so\.1' "$WORK/atomic.list" || { echo "libatomic.so.1 tidak ada di arsip"; cat "$WORK/atomic.list"; exit 1; }
-
-# mariadb-rootfs.tar.xz dibuat terpisah oleh scripts/build-mariadb-rootfs.sh (butuh docker + qemu arm64)
 
 ls -la "$ASSETS"
 

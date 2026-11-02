@@ -25,22 +25,20 @@ object Env {
     val files: File get() = ctx.filesDir
     val nativeDir: String get() = ctx.applicationInfo.nativeLibraryDir
 
-    val rootfsGame: File get() = File(files, "rootfs/game")   // Debian i386 (jalan lewat qemu)
-    val rootfsDb: File get() = File(files, "rootfs/db")       // Alpine arm64 (native)
-    val serverDir: File get() = File(files, "server")         // di-bind ke /server di rootfs game
-    val dbData: File get() = File(files, "db/data")           // di-bind ke /var/lib/mysql di rootfs db
+    val rootfsGame: File get() = File(files, "rootfs/game")
+    val rootfsDb: File get() = File(files, "rootfs/db")
+    val serverDir: File get() = File(files, "server")
+    val dbData: File get() = File(files, "db/data")
     val dbCredFile: File get() = File(files, "db/credentials.json")
     val backupDir: File get() = File(files, "backups")
     val tmpDir: File get() = File(files, "tmp")
     val dlDir: File get() = File(files, "downloads")
-    val libDir: File get() = File(files, "lib")               // symlink soname untuk libtalloc
+    val libDir: File get() = File(files, "lib")
 
     fun nativeLib(name: String) = File(nativeDir, name)
 
     /** Salin aset APK ke [dest]. Mengembalikan false bila aset tidak dibundel. */
     fun copyAsset(name: String, dest: File): Boolean {
-        // Proses build Android bisa membuang akhiran .gz (rootfs-game.tar.gz -> rootfs-game.tar),
-        // jadi coba kedua nama.
         val candidates = listOfNotNull(name, name.takeIf { it.endsWith(".gz") }?.removeSuffix(".gz"))
         for (n in candidates) {
             try {
@@ -58,7 +56,6 @@ object Env {
 
     fun prepareDirs() {
         listOf(tmpDir, libDir, serverDir, dbData, backupDir, dlDir, dbCredFile.parentFile!!).forEach { it.mkdirs() }
-        // proot (Termux) butuh soname libtalloc.so.2, sedangkan jniLibs hanya boleh bernama lib*.so
         val src = nativeLib("libtalloc.so")
         val link = File(libDir, "libtalloc.so.2")
         if (src.exists()) {
@@ -147,7 +144,6 @@ object Proot {
             "-w", workDir
         )
         if (target == Target.GAME) {
-            // -B: alamat dasar memori tamu. Tanpa ini qemu mulai dari 0x1000 dan ditolak kernel Android.
             args += listOf("-q", Env.nativeLib("libqemu-i386.so").absolutePath + " -B 0x100000")
         }
         args += listOf("-b", "/dev", "-b", "/proc")

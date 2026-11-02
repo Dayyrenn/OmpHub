@@ -20,7 +20,6 @@ Rootfs Debian dan MariaDB **sudah dibundel di dalam APK** dan dipasang otomatis 
 - [Pemakaian](#pemakaian)
 - [Menghubungkan gamemode ke database](#menghubungkan-gamemode-ke-database)
 - [Konfigurasi](#konfigurasi)
-- [Build dari source](#build-dari-source)
 - [Backup & restore](#backup--restore)
 - [Lokasi data](#lokasi-data)
 - [Arsitektur](#arsitektur)
@@ -167,34 +166,6 @@ URL server game dipakai saat menekan tombol **Unduh** / **Update** di tab Setup.
 
 ---
 
-## Build dari source
-
-Binary dan aset besar tidak ikut di-commit; semuanya dibuat oleh skrip, lalu APK dibuild dengan Gradle.
-
-```bash
-# 1. Binary native + rootfs game (butuh curl ar tar awk find od perl xz jq)
-bash scripts/fetch-binaries.sh
-
-# 2. Rootfs MariaDB (butuh docker dengan emulasi arm64, mis. docker/setup-qemu-action di CI)
-bash scripts/build-mariadb-rootfs.sh
-
-# 3. Build APK (JDK 17, Gradle 8.9)
-gradle :app:assembleDebug
-```
-
-Hasil skrip:
-
-| Lokasi | Isi |
-|---|---|
-| `app/src/main/jniLibs/arm64-v8a/` | `libproot.so`, `libproot-loader.so`, `libtalloc.so`, `libandroid-shmem.so`, `libqemu-i386.so` |
-| `app/src/main/assets/rootfs-game.tar.gz` | Rootfs Debian bookworm-slim i386 |
-| `app/src/main/assets/libatomic1-i386.tar.xz` | Paket `libatomic1` (dibutuhkan omp-server) |
-| `app/src/main/assets/mariadb-rootfs.tar.xz` | Alpine 3.20 arm64 + `mariadb` |
-
-Workflow `.github/workflows/build.yml` menjalankan ketiga langkah di atas. Bila aset tidak ada, app tetap jalan dan mengunduh komponen dari internet sebagai cadangan.
-
----
-
 ## Backup & restore
 
 Setup → **Backup** → *Buat backup (server + database)* menghasilkan satu file `.zip` berisi:
@@ -246,7 +217,7 @@ Poin penting:
   Gamemode konek ke MariaDB lewat TCP `127.0.0.1`.
 - MariaDB jalan **native arm64**, sedangkan game jalan lewat **QEMU user-mode**. Keduanya dipisah supaya
   database tidak ikut melambat oleh emulasi.
-- Rootfs game (`i386/debian:bookworm-slim`) diambil dari Docker Hub lewat registry API saat **build APK** (`scripts/fetch-binaries.sh`), lalu dibundel sebagai aset. Rootfs MariaDB dibuat di CI lewat Docker (`scripts/build-mariadb-rootfs.sh`). Di HP, semuanya hanya diekstrak.
+- Rootfs game (`i386/debian:bookworm-slim`) dibundel sebagai aset APK, begitu juga rootfs MariaDB. Di HP, semuanya hanya diekstrak.
 - Ekstraksi ke folder sementara lalu di-rename, jadi pemasangan yang terputus tidak pernah dianggap sudah terpasang.
 - MariaDB dijalankan dengan setelan hemat memori (`innodb-buffer-pool-size=32M`, `max-connections=30`,
   `performance-schema=OFF`, tanpa native AIO).
@@ -259,7 +230,7 @@ Poin penting:
 | Gejala | Kemungkinan penyebab / solusi |
 |---|---|
 | Banner "Menyiapkan komponen" tidak selesai-selesai | Tunggu beberapa menit (ekstraksi di HP lambat), lalu lihat log di tab Setup. Bila ada `[ERROR]`, tutup dan buka app lagi, atau tekan **Pasang rootfs + MariaDB**. |
-| Log Setup bilang "Mengunduh ..." untuk rootfs/MariaDB padahal harusnya bawaan APK | APK dibuild tanpa aset (build lokal yang melewatkan `fetch-binaries.sh` / `build-mariadb-rootfs.sh`). Pemasangan jatuh ke unduhan internet. Build ulang dengan skrip lengkap. |
+| Log Setup bilang "Mengunduh ..." untuk rootfs/MariaDB padahal harusnya bawaan APK | Aset tidak ada di APK, jadi pemasangan jatuh ke unduhan internet. Pastikan memakai APK resmi dari tab Releases. |
 | **Tes game** gagal | Seccomp/SELinux beberapa ROM memblokir syscall untuk `qemu-i386`. Lihat pesan error di log Setup. |
 | Pemasangan rootfs/server gagal | Cek koneksi. URL open.mp dan SA-MP bisa diganti di Setup → URL unduhan. |
 | `omp-server tidak ada di arsip` | URL open.mp salah / format rilis berubah. Ganti URL ke arsip Linux x86 `.tar.gz`. |

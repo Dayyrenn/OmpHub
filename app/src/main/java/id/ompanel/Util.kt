@@ -169,7 +169,7 @@ object Extractor {
                     val name = normName(e.name, strip) ?: continue
                     if (e.isCharacterDevice || e.isBlockDevice || e.isFIFO) continue
                     val outPath = base.resolve(name).normalize()
-                    if (!outPath.startsWith(base)) continue // cegah path traversal
+                    if (!outPath.startsWith(base)) continue
                     val out = outPath.toFile()
                     val mode = e.mode and 4095
                     when {
@@ -196,7 +196,7 @@ object Extractor {
                             out.parentFile?.mkdirs()
                             out.delete()
                             FileOutputStream(out).use { tar.copyTo(it) }
-                            chmodSafe(out.path, mode or 384) // minimal rw untuk pemilik
+                            chmodSafe(out.path, mode or 384)
                         }
                     }
                 }

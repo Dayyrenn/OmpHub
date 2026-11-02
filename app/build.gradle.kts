@@ -11,8 +11,6 @@ android {
     defaultConfig {
         applicationId = "id.omphub"
         minSdk = 26
-        // PENTING: targetSdk 28 disengaja. Android 10+ melarang exec dari folder data app
-        // untuk app yang targetSdk >= 29, dan PRoot butuh itu. Sama seperti Termux.
         targetSdk = 35
         versionCode = 2
         versionName = "1.1.0"
@@ -33,11 +31,9 @@ android {
 
     buildFeatures { compose = true }
 
-    // Aset rootfs sudah berformat .xz / .gz, tidak perlu dikompres lagi oleh aapt.
     androidResources { noCompress += listOf("xz", "gz") }
 
     packaging {
-        // Binary di jniLibs harus diekstrak ke nativeLibraryDir supaya bisa di-exec.
         jniLibs { useLegacyPackaging = true }
     }
 
@@ -55,7 +51,6 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            // Di CI (ada KEYSTORE_FILE) pakai kunci tetap; build lokal tanpa keystore jatuh ke kunci debug.
             signingConfig =
                 if (System.getenv("KEYSTORE_FILE") != null) signingConfigs.getByName("release")
                 else signingConfigs.getByName("debug")

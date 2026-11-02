@@ -48,7 +48,6 @@ object DockerHub {
         val reg = "https://registry-1.docker.io/v2/$repo"
         var manifest = JSONObject(getText("$reg/manifests/$tag", token, ACCEPT))
 
-        // Kalau tag berupa manifest list, pilih entri linux/386.
         if (manifest.has("manifests")) {
             val arr = manifest.getJSONArray("manifests")
             var digest: String? = null
@@ -68,7 +67,6 @@ object DockerHub {
         if (layers.length() == 0) throw IOException("Manifest $repo:$tag tidak punya layer")
         val digest = layers.getJSONObject(0).getString("digest")
 
-        // Blob dijawab dengan redirect ke CDN. Ikuti manual supaya header Authorization tidak ikut terkirim.
         val c = URL("$reg/blobs/$digest").openConnection() as HttpURLConnection
         c.instanceFollowRedirects = false
         c.connectTimeout = 20_000

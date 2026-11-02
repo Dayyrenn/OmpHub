@@ -98,7 +98,6 @@ object OpenMpInstaller {
         deleteTree(tmp)
         tmp.mkdirs()
 
-        // open.mp tidak dibundel di APK: selalu diunduh dari URL di Setup (atau diunggah manual lewat tab Files).
         val archive = File(Env.dlDir, archiveNameFor("openmp", url))
         log("Mengunduh open.mp dari $url")
         var lastPct = -1
@@ -120,7 +119,6 @@ object OpenMpInstaller {
         }
         fixPerms()
 
-        // Config awal bila belum ada
         val cfgFile = File(Env.serverDir, "config.json")
         val cfg = OpenMpConfig(cfgFile).load()
         if (!cfgFile.exists()) { cfg.hostName = "OmpHub Server"; cfg.maxPlayers = 50 }

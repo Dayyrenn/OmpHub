@@ -36,15 +36,12 @@ object MariaDb {
         "/", binds
     ).runAndCapture(timeoutSec)
 
-    // ---------- Instalasi ----------
-
     fun install(url: String, log: (String) -> Unit) {
         if (!File(Env.rootfsDb, "bin/busybox").exists()) {
             val staging = File(Env.rootfsDb.parentFile, "db.tmp")
             deleteTree(staging)
             val bundled = File(Env.dlDir, "mariadb-rootfs.tar.xz")
             if (Env.copyAsset("mariadb-rootfs.tar.xz", bundled)) {
-                // Alpine arm64 + paket mariadb yang sudah jadi di dalam APK (offline)
                 log("Memakai rootfs MariaDB bawaan APK, mengekstrak (bisa 1-3 menit)...")
                 Extractor.extractTar(bundled, staging)
                 bundled.delete()
@@ -79,7 +76,6 @@ object MariaDb {
     private fun initDataDir(log: (String) -> Unit) {
         Env.dbData.mkdirs()
         if (initialized) return
-        // bersihkan sisa percobaan yang gagal
         Env.dbData.listFiles()?.forEach { deleteTree(it) }
         log("Inisialisasi database...")
         val r = sh(
@@ -93,8 +89,6 @@ object MariaDb {
             error("mariadb-install-db gagal (exit ${r.exit}), lihat log di atas")
         }
     }
-
-    // ---------- Jalan / berhenti ----------
 
     fun isRunning(): Boolean = try {
         Socket().use { it.connect(InetSocketAddress("127.0.0.1", Prefs.dbPort), 400); true }
@@ -143,8 +137,6 @@ object MariaDb {
         }
         proc = null
     }
-
-    // ---------- Provisioning, SQL, dump, import ----------
 
     fun loadCredentials(): DbCredentials? {
         val f = Env.dbCredFile
