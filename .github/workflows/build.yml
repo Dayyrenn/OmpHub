@@ -14,6 +14,8 @@ jobs:
           distribution: temurin
           java-version: 17
       - name: Ambil binary proot/qemu + rootfs game
+        env:
+          QEMU_VERSION: "1%3a7.2"
         run: bash scripts/fetch-binaries.sh
       - uses: docker/setup-qemu-action@v3
         with:

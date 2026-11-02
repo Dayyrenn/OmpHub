@@ -49,7 +49,16 @@ cp -L "$(ls "$S"/libandroid-shmem.so* | head -n1)" "$DEST/libandroid-shmem.so"
 
 echo ">> qemu-user-static (Debian arm64)"
 BASE="https://deb.debian.org/debian/pool/main/q/qemu"
-LIST=$(curl -fsSL "$BASE/" | grep -o 'qemu-user-static_[^"]*_arm64\.deb' | sort -uV | tac)
+ALL=$(curl -fsSL "$BASE/" | grep -o 'qemu-user-static_[^"]*_arm64\.deb' | sort -uV | tac)
+echo "   versi tersedia:"; echo "$ALL" | sed 's/^/     /'
+# Opsional: QEMU_VERSION=1:7.2 (awalan versi) untuk memilih versi qemu tertentu, mis. bila crashdetect crash.
+# Contoh: QEMU_VERSION=1%3a7.2 bash scripts/fetch-binaries.sh   (":" di nama file Debian jadi "%3a")
+if [ -n "${QEMU_VERSION:-}" ]; then
+  LIST=$(echo "$ALL" | grep -F "qemu-user-static_${QEMU_VERSION}" || true)
+  [ -n "$LIST" ] || { echo "Tidak ada qemu-user-static dengan awalan '$QEMU_VERSION'"; exit 1; }
+else
+  LIST="$ALL"
+fi
 [ -n "$LIST" ] || { echo "qemu-user-static arm64 tidak ditemukan di $BASE"; exit 1; }
 
 is_arm64_elf() {
