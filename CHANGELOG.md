@@ -48,3 +48,9 @@ Rilis awal: panel open.mp / SA-MP (0.3.7 dan 0.3.DL) + MariaDB di Android arm64 
 - Mengembalikan pengelolaan backup: buat, restore, dan hapus backup.
 - Menghilangkan informasi baterai dari Dashboard dan bagian performa.
 - Menghilangkan pengaturan optimasi baterai dari halaman Setup.
+
+## Database Manager native
+- Mengganti tampilan Database menjadi Database Manager native Jetpack Compose (tanpa phpMyAdmin/WebView).
+- Menampilkan koneksi MariaDB lokal `127.0.0.1:<port>`.
+- Menambahkan daftar database, pembuatan database, daftar tabel, dan preview isi tabel hingga 100 baris.
+- Menambahkan SQL query editor dengan hasil tabular, serta mempertahankan Import/Export SQL dan log MariaDB.

@@ -179,6 +179,36 @@ object MariaDb {
         return sh("mariadb -S $SOCK -uroot --table -e ${q(sql)}$db", 60)
     }
 
+    /** Hasil tab-separated untuk ditampilkan oleh Database Manager native. */
+    fun query(sql: String, database: String? = null): CmdResult {
+        val db = database?.let { " ${q(it)}" } ?: ""
+        return sh("mariadb -S $SOCK -uroot --batch --raw --column-names -e ${q(sql)}$db", 60)
+    }
+
+    fun listDatabases(): List<String> {
+        val r = query("SHOW DATABASES")
+        check(r.ok) { r.output.ifBlank { "Gagal membaca database" } }
+        return r.output.lineSequence().drop(1).map { it.trim() }.filter { it.isNotEmpty() }.toList()
+    }
+
+    fun listTables(database: String): List<String> {
+        val r = query("SHOW TABLES", database)
+        check(r.ok) { r.output.ifBlank { "Gagal membaca tabel" } }
+        return r.output.lineSequence().drop(1).map { it.substringAfter('\t', it).trim() }
+            .filter { it.isNotEmpty() }.toList()
+    }
+
+    fun browseTable(database: String, table: String, limit: Int = 100): CmdResult {
+        require(database.matches(Regex("[A-Za-z0-9_$-]+"))) { "Nama database tidak valid" }
+        require(table.matches(Regex("[A-Za-z0-9_$-]+"))) { "Nama tabel tidak valid" }
+        return query("SELECT * FROM `$table` LIMIT ${limit.coerceIn(1, 500)}", database)
+    }
+
+    fun createDatabase(name: String): CmdResult {
+        if (!name.matches(Regex("[A-Za-z0-9_$-]{1,64}"))) return CmdResult(1, "Nama database tidak valid")
+        return exec("CREATE DATABASE `$name` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
+    }
+
     fun dumpTo(dest: File): CmdResult {
         val dbName = loadCredentials()?.database ?: "samp"
         dest.parentFile?.mkdirs()
