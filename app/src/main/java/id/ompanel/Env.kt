@@ -37,6 +37,18 @@ object Env {
 
     fun nativeLib(name: String) = File(nativeDir, name)
 
+    /** Salin aset APK ke [dest]. Mengembalikan false bila aset tidak dibundel. */
+    fun copyAsset(name: String, dest: File): Boolean {
+        return try {
+            dest.parentFile?.mkdirs()
+            ctx.assets.open(name).use { input -> dest.outputStream().use { input.copyTo(it) } }
+            true
+        } catch (_: java.io.FileNotFoundException) {
+            dest.delete()
+            false
+        }
+    }
+
     fun binariesOk(): Boolean =
         listOf("libproot.so", "libproot-loader.so", "libqemu-i386.so", "libtalloc.so").all { nativeLib(it).exists() }
 
@@ -102,9 +114,6 @@ object Prefs {
     var serverType: ServerType
         get() = ServerType.from(sp.getString("serverType", null))
         set(v) = sp.edit().putString("serverType", v.name).apply()
-    var autoSetupTried: Boolean
-        get() = sp.getBoolean("autoSetupTried", false)
-        set(v) = sp.edit().putBoolean("autoSetupTried", v).apply()
 }
 
 /**

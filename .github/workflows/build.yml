@@ -13,8 +13,13 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - name: Ambil binary proot/qemu
+      - name: Ambil binary proot/qemu + rootfs game + server game
         run: bash scripts/fetch-binaries.sh
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
+      - name: Bangun rootfs MariaDB (Alpine arm64)
+        run: bash scripts/build-mariadb-rootfs.sh
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"

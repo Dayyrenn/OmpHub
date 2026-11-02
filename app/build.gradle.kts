@@ -21,6 +21,9 @@ android {
 
     buildFeatures { compose = true }
 
+    // Aset rootfs sudah berformat .xz, tidak perlu dikompres lagi oleh aapt.
+    androidResources { noCompress += listOf("xz", "gz") }
+
     packaging {
         // Binary di jniLibs harus diekstrak ke nativeLibraryDir supaya bisa di-exec.
         jniLibs { useLegacyPackaging = true }

@@ -40,19 +40,30 @@ object MariaDb {
 
     fun install(url: String, log: (String) -> Unit) {
         if (!File(Env.rootfsDb, "bin/busybox").exists()) {
-            val tgz = File(Env.dlDir, archiveNameFor("alpine", url))
-            log("Mengunduh Alpine arm64...")
-            var lastPct = -1
-            downloadFile(url, tgz) { done, total ->
-                if (total > 0) {
-                    val pct = (done * 100 / total).toInt() / 25 * 25
-                    if (pct != lastPct) { lastPct = pct; log("  unduh $pct%") }
+            val staging = File(Env.rootfsDb.parentFile, "db.tmp")
+            deleteTree(staging)
+            val bundled = File(Env.dlDir, "mariadb-rootfs.tar.xz")
+            if (Env.copyAsset("mariadb-rootfs.tar.xz", bundled)) {
+                // Alpine arm64 + paket mariadb yang sudah jadi di dalam APK (offline)
+                log("Memakai rootfs MariaDB bawaan APK, mengekstrak (bisa 1-3 menit)...")
+                Extractor.extractTar(bundled, staging)
+                bundled.delete()
+            } else {
+                val tgz = File(Env.dlDir, archiveNameFor("alpine", url))
+                log("Mengunduh Alpine arm64...")
+                var lastPct = -1
+                downloadFile(url, tgz) { done, total ->
+                    if (total > 0) {
+                        val pct = (done * 100 / total).toInt() / 25 * 25
+                        if (pct != lastPct) { lastPct = pct; log("  unduh $pct%") }
+                    }
                 }
+                log("Mengekstrak rootfs...")
+                Extractor.extractTar(tgz, staging)
+                tgz.delete()
             }
             deleteTree(Env.rootfsDb)
-            log("Mengekstrak rootfs...")
-            Extractor.extractTar(tgz, Env.rootfsDb)
-            tgz.delete()
+            check(staging.renameTo(Env.rootfsDb)) { "Gagal memindahkan rootfs DB ke lokasi akhir" }
         }
         Proot.writeNetConfig(Env.rootfsDb)
 

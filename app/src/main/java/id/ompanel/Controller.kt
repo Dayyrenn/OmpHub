@@ -262,23 +262,47 @@ object Controller {
 
     private fun doInstallGameRootfs() {
         check(gameState.value == RunState.STOPPED) { "Hentikan server dulu" }
-        val archive = File(Env.dlDir, "rootfs-game.tar.gz")
-        setupLog.add("Mengunduh i386/debian:bookworm-slim dari Docker Hub")
-        var lastPct = -1
-        DockerHub.downloadRootfs("i386/debian", "bookworm-slim", archive) { done, total ->
-            if (total > 0) {
-                val pct = (done * 100 / total).toInt() / 20 * 20
-                if (pct != lastPct) { lastPct = pct; setupLog.add("  unduh $pct%") }
-            }
-        }
-        setupLog.add("Mengekstrak (bisa 1-3 menit)...")
-        deleteTree(Env.rootfsGame)
+        // Ekstrak ke folder sementara lalu di-rename, supaya rootfs setengah jadi
+        // (app ditutup / dibunuh di tengah jalan) tidak pernah dianggap sudah terpasang.
+        val staging = File(Env.rootfsGame.parentFile, "game.tmp")
+        deleteTree(staging)
+        val archive = File(Env.dlDir, "rootfs-game.tar.xz")
+
+        // 1) Pakai rootfs yang dibundel di APK (tanpa internet). Kalau tidak ada, unduh dari Docker Hub.
         var lastCount = 0
-        Extractor.extractTar(archive, Env.rootfsGame) { n ->
+        val onEntry: (Int) -> Unit = { n ->
             if (n - lastCount >= 1000) { lastCount = n; setupLog.add("  $n entri") }
         }
-        Proot.writeNetConfig(Env.rootfsGame)
-        archive.delete()
+        if (Env.copyAsset("rootfs-game.tar.xz", archive)) {
+            setupLog.add("Memakai rootfs Debian i386 bawaan APK")
+            setupLog.add("Mengekstrak (bisa 1-3 menit)...")
+            Extractor.extractTar(archive, staging, onProgress = onEntry)
+            archive.delete()
+            val atomic = File(Env.dlDir, "libatomic1-i386.tar.xz")
+            if (Env.copyAsset("libatomic1-i386.tar.xz", atomic)) {
+                setupLog.add("Memasang libatomic1 bawaan APK")
+                Extractor.extractTar(atomic, staging)
+                atomic.delete()
+            }
+        } else {
+            val dl = File(Env.dlDir, "rootfs-game.tar.gz")
+            setupLog.add("Mengunduh i386/debian:bookworm-slim dari Docker Hub")
+            var lastPct = -1
+            DockerHub.downloadRootfs("i386/debian", "bookworm-slim", dl) { done, total ->
+                if (total > 0) {
+                    val pct = (done * 100 / total).toInt() / 20 * 20
+                    if (pct != lastPct) { lastPct = pct; setupLog.add("  unduh $pct%") }
+                }
+            }
+            setupLog.add("Mengekstrak (bisa 1-3 menit)...")
+            Extractor.extractTar(dl, staging, onProgress = onEntry)
+            dl.delete()
+        }
+        Proot.writeNetConfig(staging)
+
+        deleteTree(Env.rootfsGame)
+        check(staging.renameTo(Env.rootfsGame)) { "Gagal memindahkan rootfs ke lokasi akhir" }
+        // No-op bila libatomic1 sudah ada (dari APK); kalau belum, dipasang lewat apt (butuh internet).
         ensureGameDeps { setupLog.add(it) }
     }
 
@@ -314,12 +338,18 @@ object Controller {
         if (Prefs.dbEnabled && !setupStatus.value.db) doInstallDb()
     }
 
-    /** Dipanggil saat app dibuka: pasang otomatis satu kali bila komponen belum lengkap. */
+    @Volatile private var autoSetupStarted = false
+
+    /**
+     * Dipanggil saat app dibuka: pasang otomatis komponen yang belum ada.
+     * Rootfs game, server game, dan MariaDB semuanya dipasang dari aset APK (offline).
+     * Bila gagal, dicoba lagi saat app dibuka berikutnya, bukan sekali seumur hidup.
+     */
     fun autoSetupOnFirstLaunch() {
         refreshStatus()
         val st = setupStatus.value
-        if (Prefs.autoSetupTried || st.ready || !st.binaries) return
-        Prefs.autoSetupTried = true
+        if (autoSetupStarted || st.ready || !st.binaries) return
+        autoSetupStarted = true
         installAll()
     }
 

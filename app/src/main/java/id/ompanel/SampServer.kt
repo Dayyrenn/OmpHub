@@ -128,17 +128,27 @@ object SampInstaller {
 
     /** Pasang / update samp03svr ke Env.serverDir. server.cfg, gamemodes, filterscripts, models, dst. tidak ditimpa. */
     fun install(url: String, version: SampVersion, log: (String) -> Unit) {
-        val archive = File(Env.dlDir, archiveNameFor("samp", url))
         val tmp = File(Env.files, "tmp_samp")
         deleteTree(tmp)
         tmp.mkdirs()
 
-        log("Mengunduh server SA-MP ${version.label} dari $url")
-        var lastPct = -1
-        downloadFile(url, archive) { done, total ->
-            if (total > 0) {
-                val pct = (done * 100 / total).toInt() / 20 * 20
-                if (pct != lastPct) { lastPct = pct; log("  unduh $pct%") }
+        // Bila URL masih default, pakai arsip yang dibundel di APK (offline).
+        val defUrl = if (version == SampVersion.DL) Prefs.DEF_SAMP_DL else Prefs.DEF_SAMP
+        val assetName = if (version == SampVersion.DL) "samp03DLsvr.tar.gz" else "samp037svr.tar.gz"
+        val bundled = File(Env.dlDir, "samp-bundled.tar.gz")
+        val archive: File
+        if (url == defUrl && Env.copyAsset(assetName, bundled)) {
+            log("Memakai server SA-MP ${version.label} bawaan APK")
+            archive = bundled
+        } else {
+            archive = File(Env.dlDir, archiveNameFor("samp", url))
+            log("Mengunduh server SA-MP ${version.label} dari $url")
+            var lastPct = -1
+            downloadFile(url, archive) { done, total ->
+                if (total > 0) {
+                    val pct = (done * 100 / total).toInt() / 20 * 20
+                    if (pct != lastPct) { lastPct = pct; log("  unduh $pct%") }
+                }
             }
         }
 

@@ -73,7 +73,8 @@ SQL console, serta backup/restore, semuanya dari satu aplikasi.
 | Arsitektur | **arm64-v8a** saja |
 | Root | Tidak perlu |
 | Ruang kosong | ±600 MB (rootfs + server game + MariaDB) |
-| Internet | Hanya saat pemasangan awal / update |
+| Internet | Tidak perlu untuk pemasangan awal; hanya untuk update server |
+| Ukuran APK | ±100 MB (rootfs, server game, dan MariaDB ikut di dalamnya) |
 | RAM | Disarankan 4 GB ke atas bila game dan DB jalan bersamaan |
 
 ---
@@ -90,11 +91,11 @@ SQL console, serta backup/restore, semuanya dari satu aplikasi.
 
 1. Buka app → tab **Setup**.
 2. Jalankan berurutan:
-   1. **Pasang rootfs game**: mengunduh Debian i386 dari Docker Hub, lalu memasang `libatomic1`.
-   2. **Pasang server game**: pilih mesinnya dulu di bagian **Mesin server**. open.mp mengunduh rilis terbaru `omp-server` (Linux x86), SA-MP mengunduh `samp03svr` (Linux 32-bit) sesuai versi yang dipilih (0.3.7 atau 0.3.DL). Untuk ganti versi, pilih versinya lalu tekan **Update**.
-   3. **Pasang MariaDB** (opsional): mengunduh Alpine arm64 dan memasang paket `mariadb`.
+   1. **Pasang rootfs game**: mengekstrak Debian i386 + `libatomic1` yang sudah dibundel di APK (offline). Bila APK dibuild tanpa aset itu, rootfs diunduh dari Docker Hub.
+   2. **Pasang server game** (open.mp, SA-MP 0.3.7, dan 0.3.DL sudah dibundel di APK, jadi pemasangan pertama offline; tombol **Update** open.mp tetap mengunduh rilis terbaru): pilih mesinnya dulu di bagian **Mesin server**. open.mp mengunduh rilis terbaru `omp-server` (Linux x86), SA-MP mengunduh `samp03svr` (Linux 32-bit) sesuai versi yang dipilih (0.3.7 atau 0.3.DL). Untuk ganti versi, pilih versinya lalu tekan **Update**.
+   3. **Pasang MariaDB** (opsional): rootfs Alpine arm64 + paket `mariadb` sudah dibundel di APK (dibuat oleh `scripts/build-mariadb-rootfs.sh`), lalu database diinisialisasi saat pemasangan.
 
-   Jangan tutup app selama proses berjalan. Semuanya butuh internet.
+   Langkah ini **otomatis dijalankan saat app dibuka pertama kali**; tombol di Setup hanya untuk pasang ulang atau bila otomatis gagal. Semua komponen bawaan APK, jadi tidak butuh internet. Jangan tutup app selama proses berjalan.
 3. Tekan **Tes game** dan **Tes DB**. Output `uname -a` berarti PRoot berfungsi.
 4. Buka tab **Files**, upload gamemode (`.amx`) ke `gamemodes/`, lalu daftarkan gamemode-nya: di `config.json` lewat `pawn.main_scripts` (open.mp), atau di `server.cfg` lewat baris `gamemode0 namagamemode 1` tanpa `.amx` (SA-MP).
 5. Buka tab **Dashboard** → **Start**.
