@@ -22,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -81,6 +82,15 @@ fun DatabaseScreen() {
     val dbState by Controller.dbState.collectAsStateWithLifecycle()
     val setup by Controller.setupStatus.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
+
+    // Saat halaman Database dibuka, hidupkan MariaDB. startDb() juga
+    // menyiapkan phpMyAdmin setelah koneksi database siap.
+    LaunchedEffect(setup.db) {
+        if (setup.db && Controller.dbState.value == RunState.STOPPED) {
+            Controller.startDb()
+        }
+    }
+
     var busy by remember { mutableStateOf(false) }
     var operation by remember { mutableStateOf("") }
 
@@ -170,7 +180,9 @@ fun DatabaseScreen() {
                 Text("Database", style = MaterialTheme.typography.headlineSmall)
                 Text(
                     if (dbReady) "phpMyAdmin berjalan di dalam OmpHub."
-                    else "Jalankan MariaDB untuk membuka phpMyAdmin.",
+                    else if (!setup.db) "MariaDB/phpMyAdmin belum terpasang. Setup akan menyiapkannya."
+                    else if (dbState == RunState.STARTING) "Menjalankan MariaDB dan phpMyAdmin..."
+                    else "Menyiapkan koneksi database...",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -218,7 +230,8 @@ fun DatabaseScreen() {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
                         if (!setup.db) "MariaDB/phpMyAdmin belum terpasang. Pasang melalui tab Setup."
-                        else "MariaDB belum berjalan. Jalankan server database terlebih dahulu.",
+                        else if (dbState == RunState.STARTING) "MariaDB sedang dijalankan..."
+                        else "MariaDB belum siap. Periksa log Database jika proses start gagal.",
                         modifier = Modifier.padding(20.dp),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

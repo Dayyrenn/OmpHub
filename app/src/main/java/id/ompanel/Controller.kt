@@ -377,7 +377,11 @@ object Controller {
         if (autoSetupStarted) return
         refreshStatus()
         val st = setupStatus.value
-        if (st.baseReady || !st.binaries) {
+        // Lewati setup hanya jika binary tersedia, rootfs game sudah ada,
+        // dan MariaDB (bila diaktifkan) juga sudah terpasang lengkap.
+        // Sebelumnya baseReady hanya memeriksa rootfs game sehingga instalasi
+        // MariaDB terlewati pada perangkat yang rootfs game-nya sudah ada.
+        if (!st.binaries || (st.gameRootfs && (!Prefs.dbEnabled || st.db))) {
             bootGate.value = BootGate.DONE
             return
         }
