@@ -285,6 +285,8 @@ object Controller {
                 atomic.delete()
             }
         } else {
+            setupLog.add("Aset rootfs-game.tar.gz tidak ditemukan. Isi assets APK: " +
+                (Env.ctx.assets.list("")?.joinToString() ?: "(kosong)"))
             val dl = File(Env.dlDir, "rootfs-game.tar.gz")
             setupLog.add("Mengunduh i386/debian:bookworm-slim dari Docker Hub")
             var lastPct = -1
