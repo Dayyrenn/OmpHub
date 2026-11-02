@@ -35,5 +35,3 @@ Source komponen dapat diperoleh dari:
 - Ubuntu (qemu, gcc): https://packages.ubuntu.com
 - Debian: https://sources.debian.org
 - Alpine (mariadb): https://pkgs.alpinelinux.org
-
-Proyek ini tidak berafiliasi dengan open.mp, Rockstar Games, atau Take-Two Interactive.
