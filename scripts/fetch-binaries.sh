@@ -7,7 +7,12 @@
 #   libtalloc.so        <- dependency proot (paket Termux)
 #   libqemu-i386.so     <- qemu-i386-static (paket Debian qemu-user-static, arm64)
 #
-# Butuh: curl ar tar awk find od (Linux/macOS/WSL/GitHub Actions).
+# Juga menyiapkan aset yang dibundel di APK (app/src/main/assets/):
+#   rootfs-game.tar.gz, libatomic1-i386.tar.xz, openmp-linux-x86.tar.gz,
+#   samp037svr.tar.gz, samp03DLsvr.tar.gz
+# (mariadb-rootfs.tar.xz dibuat oleh scripts/build-mariadb-rootfs.sh)
+#
+# Butuh: curl ar tar awk find od perl xz jq (Linux/macOS/WSL/GitHub Actions).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -16,7 +21,7 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$DEST"
 
-for t in curl ar tar awk find od perl xz; do
+for t in curl ar tar awk find od perl xz jq; do
   command -v "$t" >/dev/null || { echo "Butuh '$t'"; exit 1; }
 done
 
@@ -109,15 +114,14 @@ done
 cp -L "$FOUND" "$DEST/libqemu-i386.so"
 
 # ---------------------------------------------------------------------------
-# Rootfs game (Debian i386) dibundel di APK supaya terpasang otomatis tanpa internet
+# Aset yang dibundel di APK supaya semuanya terpasang otomatis tanpa internet
 # saat app dibuka pertama kali.
-#   assets/rootfs-game.tar.xz     <- rootfs Debian bookworm-slim i386 (debuerreotype)
-#   assets/libatomic1-i386.tar.xz <- isi paket libatomic1 (dibutuhkan omp-server), diekstrak di atas rootfs
 # ---------------------------------------------------------------------------
 ASSETS="$ROOT/app/src/main/assets"
 mkdir -p "$ASSETS"
+
+# --- Rootfs Debian i386 (layer dari Docker Hub, tanpa docker) ---
 echo ">> Rootfs Debian i386 (bundel APK, dari Docker Hub)"
-command -v jq >/dev/null || { echo "Butuh 'jq'"; exit 1; }
 REPO="i386/debian"; TAG="bookworm-slim"
 REG="https://registry-1.docker.io/v2/$REPO"
 ACCEPT="application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json"
@@ -133,6 +137,33 @@ fi
 LAYER=$(echo "$MANIFEST" | jq -r '.layers[0].digest')
 dh "$REG/blobs/$LAYER" -o "$ASSETS/rootfs-game.tar.gz"
 tar -tzf "$ASSETS/rootfs-game.tar.gz" >/dev/null || { echo "rootfs-game.tar.gz rusak"; exit 1; }
+
+# --- libatomic1 i386 (dibutuhkan omp-server), diekstrak di atas rootfs oleh app ---
+echo ">> libatomic1 i386 (bundel APK)"
+GCC_POOL="https://deb.debian.org/debian/pool/main/g/gcc-12"
+ATOMIC_DEB=$(curl -fsSL "$GCC_POOL/" | grep -o 'libatomic1_12[^"]*_i386\.deb' | sort -uV | tail -n1)
+[ -n "$ATOMIC_DEB" ] || { echo "libatomic1 i386 tidak ditemukan di $GCC_POOL"; exit 1; }
+echo "   $ATOMIC_DEB"
+curl -fsSL "$GCC_POOL/$ATOMIC_DEB" -o "$WORK/libatomic1.deb"
+mkdir -p "$WORK/atomic"
+( cd "$WORK/atomic" && ar x ../libatomic1.deb )
+DATA=$(ls "$WORK"/atomic/data.tar.* | head -n1)
+case "$DATA" in
+  *.xz) cp "$DATA" "$ASSETS/libatomic1-i386.tar.xz" ;;
+  *)    mkdir -p "$WORK/atomic/content"
+        tar -xf "$DATA" -C "$WORK/atomic/content"
+        tar -C "$WORK/atomic/content" -cJf "$ASSETS/libatomic1-i386.tar.xz" . ;;
+esac
+tar -tJf "$ASSETS/libatomic1-i386.tar.xz" | grep -q 'libatomic\.so\.1' || { echo "libatomic.so.1 tidak ada di arsip"; exit 1; }
+
+# --- Server game ---
+echo ">> Server game (bundel APK)"
+curl -fsSL "https://github.com/openmultiplayer/open.mp/releases/latest/download/open.mp-linux-x86.tar.gz" \
+  -o "$ASSETS/openmp-linux-x86.tar.gz"
+curl -fsSL "https://sa-mp.co.id/files/samp037svr_R2-2-1.tar.gz" -o "$ASSETS/samp037svr.tar.gz"
+curl -fsSL "https://sa-mp.co.id/files/samp03DLsvr_R1.tar.gz"    -o "$ASSETS/samp03DLsvr.tar.gz"
+for f in openmp-linux-x86 samp037svr samp03DLsvr; do
+  tar -tzf "$ASSETS/$f.tar.gz" >/dev/null || { echo "$f.tar.gz rusak"; exit 1; }
 done
 
 # mariadb-rootfs.tar.xz dibuat terpisah oleh scripts/build-mariadb-rootfs.sh (butuh docker + qemu arm64)
