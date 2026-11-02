@@ -31,20 +31,32 @@ fun DashboardScreen() {
     val game by Controller.gameState.collectAsStateWithLifecycle()
     val db by Controller.dbState.collectAsStateWithLifecycle()
     val st by Controller.setupStatus.collectAsStateWithLifecycle()
+    val perf by PerfMonitor.snapshot.collectAsStateWithLifecycle()
+    var queryMs by remember { mutableStateOf<Long?>(null) }
     var info by remember { mutableStateOf<Samp.Info?>(null) }
     var players by remember { mutableStateOf(emptyList<Samp.Player>()) }
 
-    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { Controller.refreshStatus() } }
+    LaunchedEffect(Unit) {
+        PerfMonitor.ensureStarted()
+        withContext(Dispatchers.IO) { Controller.refreshStatus() }
+    }
 
     LaunchedEffect(game) {
         while (game == RunState.RUNNING) {
-            val r = withContext(Dispatchers.IO) { Samp.info(Prefs.port) to Samp.players(Prefs.port) }
+            val r = withContext(Dispatchers.IO) {
+                val t0 = System.nanoTime()
+                val i = Samp.info(Prefs.port)
+                val ms = (System.nanoTime() - t0) / 1_000_000
+                Triple(i, Samp.players(Prefs.port), if (i != null) ms else null)
+            }
             info = r.first
             players = r.second
+            queryMs = r.third
             delay(3000)
         }
         info = null
         players = emptyList()
+        queryMs = null
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
@@ -104,6 +116,8 @@ fun DashboardScreen() {
             if (ips.isNotEmpty()) Text("Alamat LAN: " + ips.joinToString { "$it:${Prefs.port}" })
             Text("Di HP yang sama: 127.0.0.1:${Prefs.port}", style = MaterialTheme.typography.bodySmall)
         }
+
+        Section("Performa") { PerfContent(perf, queryMs) }
 
         if (game == RunState.RUNNING) {
             Section("Pemain (${players.size})") {

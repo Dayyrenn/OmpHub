@@ -4,6 +4,10 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/).
 
 ## [Belum dirilis]
 
+### Ditambahkan
+- Kartu "Performa" di Dashboard: CPU, RAM, thread, dan uptime per komponen (server game, MariaDB, panel) lengkap dengan grafik ~2 menit terakhir.
+- Info perangkat: RAM HP, baterai, suhu, status termal, trafik jaringan, ruang penyimpanan, dan waktu respons query server.
+
 ### Diubah
 - Server game (open.mp, SA-MP 0.3.7, SA-MP 0.3.DL) tidak lagi dibundel di APK dan tidak dipasang otomatis. User mengunduhnya dari tab Setup atau mengunggah sendiri lewat tab Files.
 - Pemasangan otomatis dan tombol "Pasang semua" kini hanya memasang rootfs game dan MariaDB.

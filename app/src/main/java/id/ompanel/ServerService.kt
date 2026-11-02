@@ -51,6 +51,7 @@ class ServerService : Service() {
             wake = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ompanel:server").apply { acquire() }
         }
         watch()
+        PerfMonitor.ensureStarted()
 
         val action = intent?.action
         busy.incrementAndGet()

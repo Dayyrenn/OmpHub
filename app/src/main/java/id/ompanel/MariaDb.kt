@@ -26,6 +26,8 @@ object MariaDb {
 
     @Volatile private var proc: Process? = null
 
+    fun pid(): Int? = pidOf(proc)
+
     val installed: Boolean get() = File(Env.rootfsDb, "usr/bin/mariadbd").exists()
     val initialized: Boolean get() = File(Env.dbData, "mysql").isDirectory
 

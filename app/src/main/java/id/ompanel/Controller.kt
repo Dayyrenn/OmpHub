@@ -1,5 +1,6 @@
 package id.omphub
 
+import android.os.SystemClock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -50,6 +51,12 @@ object Controller {
     @Volatile private var gameProc: Process? = null
     @Volatile private var runningType = ServerType.OMP
     @Volatile private var gameStdin: BufferedWriter? = null
+
+    /** Waktu (SystemClock.elapsedRealtime) server game / MariaDB mulai berjalan, untuk uptime. */
+    @Volatile var gameStartedAt = 0L
+    @Volatile var dbStartedAt = 0L
+
+    fun gamePid(): Int? = pidOf(gameProc)
 
     fun refreshStatus() {
         setupStatus.value = SetupStatus(
@@ -108,6 +115,7 @@ object Controller {
             val p = pb.start()
             gameProc = p
             gameStdin = p.outputStream.bufferedWriter()
+            gameStartedAt = SystemClock.elapsedRealtime()
             gameState.value = RunState.RUNNING
             thread(name = "omp-log", isDaemon = true) {
                 p.inputStream.bufferedReader().forEachLine { gameLog.add(it) }
@@ -193,6 +201,7 @@ object Controller {
                 }
             )
             if (MariaDb.waitReady()) {
+                dbStartedAt = SystemClock.elapsedRealtime()
                 dbState.value = RunState.RUNNING
                 if (MariaDb.loadCredentials() == null) {
                     val c = MariaDb.provision()
