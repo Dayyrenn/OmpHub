@@ -25,11 +25,14 @@ object MariaDb {
     private val binds get() = listOf(Env.dbData.absolutePath to "/var/lib/mysql")
 
     @Volatile private var proc: Process? = null
+    @Volatile private var phpMyAdminProc: Process? = null
+    private val phpMyAdminPort = 8080
 
     fun pid(): Int? = pidOf(proc)
 
     val installed: Boolean get() = File(Env.rootfsDb, "usr/bin/mariadbd").exists()
     val initialized: Boolean get() = File(Env.dbData, "mysql").isDirectory
+    val phpMyAdminInstalled: Boolean get() = File(Env.rootfsDb, "usr/share/webapps/phpmyadmin/index.php").exists()
 
     private fun sh(script: String, timeoutSec: Long = 300): CmdResult =
     Proot.build(
@@ -67,10 +70,42 @@ object MariaDb {
         Proot.writeNetConfig(Env.rootfsDb)
 
         if (!installed) {
-            log("Memasang paket mariadb (apk), butuh beberapa menit...")
+            log("Memasang paket MariaDB (apk), butuh beberapa menit...")
             val r = sh("apk add --no-cache mariadb mariadb-client", 900)
             log(r.output.takeLast(600))
-            check(r.ok && installed) { "apk add gagal (exit ${r.exit}). Cek koneksi internet." }
+            check(r.ok && installed) { "Pemasangan MariaDB gagal (exit ${r.exit}). Cek koneksi internet." }
+        }
+        if (!phpMyAdminInstalled) {
+            log("Memasang runtime PHP 8.3 dan ekstensi yang dibutuhkan phpMyAdmin...")
+            val r = sh(
+                "apk add --no-cache php83 php83-mysqli php83-bz2 php83-ctype php83-curl " +
+                    "php83-gd php83-mbstring php83-openssl php83-session php83-zip",
+                1200
+            )
+            log(r.output.takeLast(1200))
+            check(r.ok) { "Pemasangan PHP gagal (exit ${r.exit}). Cek koneksi internet." }
+
+            val archive = File(Env.dlDir, "phpMyAdmin-5.2.3-all-languages.tar.gz")
+            val staging = File(Env.rootfsDb, "usr/share/webapps/phpmyadmin.tmp")
+            val target = File(Env.rootfsDb, "usr/share/webapps/phpmyadmin")
+            deleteTree(staging)
+            log("Mengunduh phpMyAdmin 5.2.3...")
+            downloadFile(
+                "https://files.phpmyadmin.net/phpMyAdmin/5.2.3/phpMyAdmin-5.2.3-all-languages.tar.gz",
+                archive
+            ) { done, total ->
+                if (total > 0) {
+                    val pct = (done * 100 / total).toInt() / 25 * 25
+                    log("  phpMyAdmin $pct%")
+                }
+            }
+            log("Mengekstrak phpMyAdmin...")
+            Extractor.extractTar(archive, staging, strip = 1)
+            archive.delete()
+            deleteTree(target)
+            target.parentFile?.mkdirs()
+            check(staging.renameTo(target)) { "Gagal memasang file phpMyAdmin." }
+            check(phpMyAdminInstalled) { "File phpMyAdmin tidak lengkap setelah ekstraksi." }
         }
         initDataDir(log)
     }
@@ -121,6 +156,81 @@ object MariaDb {
         }
     }
 
+    /**
+     * Menyiapkan phpMyAdmin lokal dengan akun administrator khusus.
+     * Server PHP hanya bind ke loopback, sehingga tidak diekspos ke jaringan luar.
+     */
+    fun startPhpMyAdmin(onLine: (String) -> Unit = {}) {
+        if (phpMyAdminProc?.isAlive == true && isPhpMyAdminRunning()) return
+        check(phpMyAdminInstalled) { "phpMyAdmin belum terpasang. Pasang ulang komponen MariaDB melalui Setup." }
+        check(isRunning()) { "MariaDB harus berjalan sebelum phpMyAdmin dibuka." }
+
+        val configFile = File(Env.rootfsDb, "usr/share/webapps/phpmyadmin/config.inc.php")
+        configFile.parentFile?.mkdirs()
+        val adminUser = "omphub_admin"
+        val adminPass = randomToken(32)
+        val sql = "CREATE USER IF NOT EXISTS '$adminUser'@'127.0.0.1' IDENTIFIED BY '$adminPass'; " +
+            "ALTER USER '$adminUser'@'127.0.0.1' IDENTIFIED BY '$adminPass'; " +
+            "GRANT ALL PRIVILEGES ON *.* TO '$adminUser'@'127.0.0.1' WITH GRANT OPTION; FLUSH PRIVILEGES;"
+        val grant = exec(sql)
+        check(grant.ok) { "Gagal menyiapkan akun phpMyAdmin: ${grant.output}" }
+
+        val phpConfig = """<?php
+            ${'$'}cfg['blowfish_secret'] = '$adminPass';
+            ${'$'}i = 0;
+            ${'$'}i++;
+            ${'$'}cfg['Servers'][${'$'}i]['auth_type'] = 'config';
+            ${'$'}cfg['Servers'][${'$'}i]['host'] = '127.0.0.1';
+            ${'$'}cfg['Servers'][${'$'}i]['port'] = '${Prefs.dbPort}';
+            ${'$'}cfg['Servers'][${'$'}i]['connect_type'] = 'tcp';
+            ${'$'}cfg['Servers'][${'$'}i]['user'] = '$adminUser';
+            ${'$'}cfg['Servers'][${'$'}i]['password'] = '$adminPass';
+            ${'$'}cfg['Servers'][${'$'}i]['AllowNoPassword'] = false;
+            ${'$'}cfg['TempDir'] = '/tmp/phpmyadmin';
+            ${'$'}cfg['UploadDir'] = '';
+            ${'$'}cfg['SaveDir'] = '';
+        """.trimIndent()
+        configFile.writeText(phpConfig)
+        File(Env.rootfsDb, "tmp/phpmyadmin").apply { mkdirs(); chmodSafe(path, 511 or 512) }
+
+        val pb = Proot.build(
+            Proot.Target.DB,
+            listOf("/bin/sh", "-c", "exec php83 -S 127.0.0.1:$phpMyAdminPort -t /usr/share/webapps"),
+            "/",
+            binds
+        )
+        pb.redirectErrorStream(true)
+        val process = pb.start()
+        phpMyAdminProc = process
+        thread(name = "phpmyadmin-log", isDaemon = true) {
+            try {
+                process.inputStream.bufferedReader().forEachLine { onLine("[phpMyAdmin] $it") }
+            } catch (_: Exception) { }
+            runCatching { process.waitFor() }
+            if (phpMyAdminProc === process) phpMyAdminProc = null
+        }
+        val deadline = System.currentTimeMillis() + 15_000
+        while (System.currentTimeMillis() < deadline) {
+            if (isPhpMyAdminRunning()) return
+            if (!process.isAlive) break
+            Thread.sleep(250)
+        }
+        stopPhpMyAdmin()
+        error("phpMyAdmin tidak dapat membuka port $phpMyAdminPort. Periksa log MariaDB.")
+    }
+
+    fun isPhpMyAdminRunning(): Boolean = try {
+        Socket().use { it.connect(InetSocketAddress("127.0.0.1", phpMyAdminPort), 350); true }
+    } catch (_: Exception) { false }
+
+    @Synchronized
+    fun stopPhpMyAdmin() {
+        val p = phpMyAdminProc ?: return
+        p.destroy()
+        if (!p.waitFor(3, TimeUnit.SECONDS)) p.destroyForcibly()
+        phpMyAdminProc = null
+    }
+
     fun waitReady(timeoutMs: Long = 90_000): Boolean {
         val end = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < end) {
@@ -134,6 +244,7 @@ object MariaDb {
     /** Shutdown bersih dulu; kill hanya sebagai cadangan. */
     @Synchronized
     fun stop() {
+        stopPhpMyAdmin()
         val p = proc ?: return
         if (isRunning()) sh("mariadb-admin -S $SOCK -uroot shutdown", 60)
         if (!p.waitFor(20, TimeUnit.SECONDS)) {
@@ -179,7 +290,7 @@ object MariaDb {
         return sh("mariadb -S $SOCK -uroot --table -e ${q(sql)}$db", 60)
     }
 
-    /** Hasil tab-separated untuk ditampilkan oleh Database Manager native. */
+    /** Hasil tab-separated untuk operasi database internal dan diagnostik. */
     fun query(sql: String, database: String? = null): CmdResult {
         val db = database?.let { " ${q(it)}" } ?: ""
         return sh("mariadb -S $SOCK -uroot --batch --raw --column-names -e ${q(sql)}$db", 60)

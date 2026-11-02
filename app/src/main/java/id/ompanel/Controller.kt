@@ -73,7 +73,7 @@ object Controller {
             gameRootfs = File(Env.rootfsGame, "usr/bin/env").exists(),
             openMp = ServerType.OMP.installed,
             samp = ServerType.SAMP.installed,
-            db = MariaDb.installed && MariaDb.initialized,
+            db = MariaDb.installed && MariaDb.initialized && MariaDb.phpMyAdminInstalled,
             engine = Prefs.serverType
         )
     }
@@ -209,17 +209,21 @@ object Controller {
             MariaDb.start(
                 onLine = { dbLog.add(it) },
                 onExit = { code ->
+                    MariaDb.stopPhpMyAdmin()
                     dbLog.add("[panel] mariadbd berhenti (exit $code)")
                     dbState.value = RunState.STOPPED
                 }
             )
             if (MariaDb.waitReady()) {
                 dbStartedAt = SystemClock.elapsedRealtime()
-                dbState.value = RunState.RUNNING
                 if (MariaDb.loadCredentials() == null) {
                     val c = MariaDb.provision()
                     dbLog.add("[panel] Database '${c.database}' dan user '${c.user}' dibuat.")
                 }
+                runCatching { MariaDb.startPhpMyAdmin { dbLog.add(it) } }
+                    .onSuccess { dbLog.add("[panel] phpMyAdmin siap di http://127.0.0.1:8080/phpmyadmin/") }
+                    .onFailure { dbLog.add("[panel] phpMyAdmin gagal dijalankan: ${it.message}") }
+                dbState.value = RunState.RUNNING
             } else {
                 dbLog.add("[panel] MariaDB tidak siap dalam waktu yang ditentukan.")
                 MariaDb.stop()
@@ -234,6 +238,7 @@ object Controller {
     suspend fun stopDb(): Unit = withContext(Dispatchers.IO) {
         if (dbState.value == RunState.STOPPED) return@withContext
         dbState.value = RunState.STOPPING
+        MariaDb.stopPhpMyAdmin()
         MariaDb.stop()
         dbState.value = RunState.STOPPED
     }

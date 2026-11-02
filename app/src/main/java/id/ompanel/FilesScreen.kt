@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
@@ -33,6 +35,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -42,11 +45,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import android.view.WindowManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
@@ -165,8 +171,18 @@ fun FilesScreen() {
 
     editing?.let { file ->
         Dialog(onDismissRequest = { editing = null }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+            val dialogWindow = (LocalView.current.parent as? DialogWindowProvider)?.window
+            SideEffect {
+                dialogWindow?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            }
             Surface(Modifier.fillMaxSize()) {
-                Column(Modifier.padding(8.dp)) {
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .imePadding()
+                        .navigationBarsPadding()
+                        .padding(8.dp)
+                ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(file.name, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
                         IconButton(onClick = {
@@ -179,7 +195,9 @@ fun FilesScreen() {
                     OutlinedTextField(
                         value = editText,
                         onValueChange = { editText = it },
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth(),
                         textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
                     )
                 }
