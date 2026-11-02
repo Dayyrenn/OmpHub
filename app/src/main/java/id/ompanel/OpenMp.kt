@@ -98,21 +98,14 @@ object OpenMpInstaller {
         deleteTree(tmp)
         tmp.mkdirs()
 
-        // Pemasangan pertama memakai open.mp bawaan APK (offline). Tombol "Update" tetap mengunduh rilis terbaru.
-        val bundled = File(Env.dlDir, "openmp-bundled.tar.gz")
-        val archive: File
-        if (!ServerType.OMP.installed && Env.copyAsset("openmp-linux-x86.tar.gz", bundled)) {
-            log("Memakai open.mp bawaan APK")
-            archive = bundled
-        } else {
-            archive = File(Env.dlDir, archiveNameFor("openmp", url))
-            log("Mengunduh open.mp dari $url")
-            var lastPct = -1
-            downloadFile(url, archive) { done, total ->
-                if (total > 0) {
-                    val pct = (done * 100 / total).toInt() / 20 * 20
-                    if (pct != lastPct) { lastPct = pct; log("  unduh $pct%") }
-                }
+        // open.mp tidak dibundel di APK: selalu diunduh dari URL di Setup (atau diunggah manual lewat tab Files).
+        val archive = File(Env.dlDir, archiveNameFor("openmp", url))
+        log("Mengunduh open.mp dari $url")
+        var lastPct = -1
+        downloadFile(url, archive) { done, total ->
+            if (total > 0) {
+                val pct = (done * 100 / total).toInt() / 20 * 20
+                if (pct != lastPct) { lastPct = pct; log("  unduh $pct%") }
             }
         }
 

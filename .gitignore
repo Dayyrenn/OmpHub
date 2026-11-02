@@ -11,7 +11,4 @@ app/src/main/jniLibs/arm64-v8a/*.so
 # Rootfs game yang dibundel ke APK (dibuat oleh scripts/fetch-binaries.sh)
 app/src/main/assets/rootfs-game.tar.gz
 app/src/main/assets/libatomic1-i386.tar.xz
-app/src/main/assets/openmp-linux-x86.tar.gz
-app/src/main/assets/samp037svr.tar.gz
-app/src/main/assets/samp03DLsvr.tar.gz
 app/src/main/assets/mariadb-rootfs.tar.xz

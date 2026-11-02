@@ -30,6 +30,8 @@ data class SetupStatus(
     /** Server terpilih ([engine]) sudah terpasang. */
     val serverInstalled get() = if (engine == ServerType.SAMP) samp else openMp
     val ready get() = binaries && gameRootfs && serverInstalled
+    /** Komponen yang dipasang otomatis (tanpa server game, karena server dipasang manual oleh user). */
+    val baseReady get() = binaries && gameRootfs
 }
 
 /** Pusat state aplikasi. Proses hidup di sini (bukan di UI) dan dijaga oleh ServerService. */
@@ -328,29 +330,35 @@ object Controller {
     fun installServer() = runSetup("Pasang / update ${serverLabel()}") { doInstallServer() }
     fun installDb() = runSetup("Pasang MariaDB") { doInstallDb() }
 
-    /** Pasang semua komponen yang belum ada, berurutan: rootfs game, server terpilih, lalu MariaDB (bila aktif). */
+    /**
+     * Pasang komponen dasar yang belum ada, berurutan: rootfs game lalu MariaDB (bila aktif).
+     * Server game (open.mp / SA-MP) TIDAK ikut dipasang: user mengunduhnya lewat tombol di tab Setup
+     * atau mengunggah sendiri lewat tab Files.
+     */
     fun installAll() = runSetup("Pasang semua komponen") {
         check(Env.binariesOk()) { "Binary proot/qemu belum ada di APK" }
         check(gameState.value == RunState.STOPPED && dbState.value == RunState.STOPPED) { "Hentikan server dulu" }
         refreshStatus()
         if (!setupStatus.value.gameRootfs) doInstallGameRootfs()
         refreshStatus()
-        if (!setupStatus.value.serverInstalled) doInstallServer()
-        refreshStatus()
         if (Prefs.dbEnabled && !setupStatus.value.db) doInstallDb()
+        refreshStatus()
+        if (!setupStatus.value.serverInstalled) {
+            setupLog.add("Server ${setupStatus.value.engine.label} belum ada. Unduh lewat tombol di tab Setup, atau unggah manual lewat tab Files.")
+        }
     }
 
     @Volatile private var autoSetupStarted = false
 
     /**
      * Dipanggil saat app dibuka: pasang otomatis komponen yang belum ada.
-     * Rootfs game, server game, dan MariaDB semuanya dipasang dari aset APK (offline).
+     * Rootfs game dan MariaDB dipasang dari aset APK (offline). Server game tidak dipasang otomatis.
      * Bila gagal, dicoba lagi saat app dibuka berikutnya, bukan sekali seumur hidup.
      */
     fun autoSetupOnFirstLaunch() {
         refreshStatus()
         val st = setupStatus.value
-        if (autoSetupStarted || st.ready || !st.binaries) return
+        if (autoSetupStarted || st.baseReady || !st.binaries) return
         autoSetupStarted = true
         installAll()
     }

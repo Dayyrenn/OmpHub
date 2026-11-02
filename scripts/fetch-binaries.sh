@@ -8,9 +8,11 @@
 #   libqemu-i386.so     <- qemu-i386-static (paket Debian qemu-user-static, arm64)
 #
 # Juga menyiapkan aset yang dibundel di APK (app/src/main/assets/):
-#   rootfs-game.tar.gz, libatomic1-i386.tar.xz, openmp-linux-x86.tar.gz,
-#   samp037svr.tar.gz, samp03DLsvr.tar.gz
+#   rootfs-game.tar.gz, libatomic1-i386.tar.xz
 # (mariadb-rootfs.tar.xz dibuat oleh scripts/build-mariadb-rootfs.sh)
+#
+# Server game (open.mp / SA-MP) SENGAJA tidak dibundel: user mengunduhnya dari tab Setup
+# atau mengunggah sendiri lewat tab Files.
 #
 # Butuh: curl ar tar awk find od perl xz jq (Linux/macOS/WSL/GitHub Actions).
 set -euo pipefail
@@ -156,16 +158,6 @@ case "$DATA" in
 esac
 tar -tJf "$ASSETS/libatomic1-i386.tar.xz" > "$WORK/atomic.list"
 grep -q 'libatomic\.so\.1' "$WORK/atomic.list" || { echo "libatomic.so.1 tidak ada di arsip"; cat "$WORK/atomic.list"; exit 1; }
-
-# --- Server game ---
-echo ">> Server game (bundel APK)"
-curl -fsSL "https://github.com/openmultiplayer/open.mp/releases/latest/download/open.mp-linux-x86.tar.gz" \
-  -o "$ASSETS/openmp-linux-x86.tar.gz"
-curl -fsSL "https://sa-mp.co.id/files/samp037svr_R2-2-1.tar.gz" -o "$ASSETS/samp037svr.tar.gz"
-curl -fsSL "https://sa-mp.co.id/files/samp03DLsvr_R1.tar.gz"    -o "$ASSETS/samp03DLsvr.tar.gz"
-for f in openmp-linux-x86 samp037svr samp03DLsvr; do
-  tar -tzf "$ASSETS/$f.tar.gz" >/dev/null || { echo "$f.tar.gz rusak"; exit 1; }
-done
 
 # mariadb-rootfs.tar.xz dibuat terpisah oleh scripts/build-mariadb-rootfs.sh (butuh docker + qemu arm64)
 

@@ -109,7 +109,7 @@ fun SetupScreen() {
                 )
             }
             Button(onClick = { Controller.installAll() }, enabled = !busy && game == RunState.STOPPED && st.binaries) {
-                Text("Pasang semua (otomatis)")
+                Text("Pasang rootfs + MariaDB (otomatis)")
             }
             Text(mark(st.gameRootfs) + "Rootfs game (Debian i386)")
             Button(onClick = { Controller.installGameRootfs() }, enabled = !busy && game == RunState.STOPPED && st.binaries) {
@@ -117,7 +117,15 @@ fun SetupScreen() {
             }
             Text(mark(st.serverInstalled) + "$serverName (${st.engine.binary})")
             Button(onClick = { Controller.installServer() }, enabled = !busy && game == RunState.STOPPED) {
-                Text(if (st.serverInstalled) "Update $serverName" else "2. Pasang $serverName")
+                Text(if (st.serverInstalled) "Update $serverName" else "2. Unduh $serverName")
+            }
+            if (!st.serverInstalled) {
+                Text(
+                    "Server game tidak ikut di APK dan tidak dipasang otomatis. Unduh lewat tombol di atas (URL bisa diatur di bawah), " +
+                        "atau unggah sendiri lewat tab Files: upload arsip server lalu Unzip, dan pastikan ${st.engine.binary} " +
+                        "ada langsung di folder server (bukan di dalam subfolder).",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
             Text(mark(st.db) + "MariaDB (opsional)")
             Button(onClick = { Controller.installDb() }, enabled = !busy && st.binaries) {

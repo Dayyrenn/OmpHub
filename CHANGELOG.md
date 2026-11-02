@@ -2,6 +2,13 @@
 
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.1.0/).
 
+## [Belum dirilis]
+
+### Diubah
+- Server game (open.mp, SA-MP 0.3.7, SA-MP 0.3.DL) tidak lagi dibundel di APK dan tidak dipasang otomatis. User mengunduhnya dari tab Setup atau mengunggah sendiri lewat tab Files.
+- Pemasangan otomatis dan tombol "Pasang semua" kini hanya memasang rootfs game dan MariaDB.
+- `scripts/fetch-binaries.sh` tidak lagi mengunduh server game; ukuran APK mengecil.
+
 ## [1.1.0] - 2026-11-02
 
 Semua komponen kini ada di dalam APK dan dipasang otomatis saat app dibuka pertama kali, tanpa internet dan tanpa menekan tombol di tab Setup.
