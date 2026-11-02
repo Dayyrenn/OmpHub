@@ -59,6 +59,10 @@ object Prefs {
         "https://raw.githubusercontent.com/debuerreotype/docker-debian-artifacts/dist-i386/bookworm/slim/rootfs.tar.xz"
     const val DEF_OPENMP =
         "https://github.com/openmultiplayer/open.mp/releases/latest/download/open.mp-linux-x86.tar.gz"
+    const val DEF_SAMP =
+        "https://gta-multiplayer.cz/downloads/samp037svr_R2-2-1.tar.gz"
+    const val DEF_SAMP_DL =
+        "https://archive.org/download/sa-mp-0.3.dl/samp03DLsvr_R1.tar.gz"
     const val DEF_ALPINE =
         "https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/aarch64/alpine-minirootfs-3.20.3-aarch64.tar.gz"
 
@@ -72,6 +76,12 @@ object Prefs {
     var urlOpenMp: String
         get() = str("urlOpenMp", DEF_OPENMP)
         set(v) = put("urlOpenMp", v)
+    var urlSamp: String
+        get() = str("urlSamp", DEF_SAMP)
+        set(v) = put("urlSamp", v)
+    var urlSampDl: String
+        get() = str("urlSampDl", DEF_SAMP_DL)
+        set(v) = put("urlSampDl", v)
     var urlAlpine: String
         get() = str("urlAlpine", DEF_ALPINE)
         set(v) = put("urlAlpine", v)
@@ -85,6 +95,13 @@ object Prefs {
     var dbEnabled: Boolean
         get() = sp.getBoolean("dbEnabled", true)
         set(v) = sp.edit().putBoolean("dbEnabled", v).apply()
+    var sampVersion: SampVersion
+        get() = SampVersion.from(sp.getString("sampVersion", null))
+        set(v) = sp.edit().putString("sampVersion", v.code).apply()
+    fun sampUrl(v: SampVersion) = if (v == SampVersion.DL) urlSampDl else urlSamp
+    var serverType: ServerType
+        get() = ServerType.from(sp.getString("serverType", null))
+        set(v) = sp.edit().putString("serverType", v.name).apply()
     var autoSetupTried: Boolean
         get() = sp.getBoolean("autoSetupTried", false)
         set(v) = sp.edit().putBoolean("autoSetupTried", v).apply()

@@ -1,6 +1,6 @@
 # OmpHub
 
-Panel untuk menjalankan server **open.mp** + **MariaDB** langsung dari HP Android (arm64), **tanpa root**.
+Panel untuk menjalankan server **open.mp** atau **SA-MP** (0.3.7 / 0.3.DL) + **MariaDB** langsung dari HP Android (arm64), **tanpa root**.
 
 Start/stop server, console (stdin & RCON), dashboard pemain (query UDP), file manager + editor,
 SQL console, serta backup/restore, semuanya dari satu aplikasi.
@@ -30,10 +30,11 @@ SQL console, serta backup/restore, semuanya dari satu aplikasi.
 ## Fitur
 
 **Kontrol server**
-- Start / Stop / Restart open.mp dari tombol atau dari notifikasi (aksi *Stop*).
-- Urutan start otomatis: MariaDB dulu, baru open.mp. Stop dilakukan terbalik.
+- Pilih mesin server di tab Setup: **open.mp** atau **SA-MP** (versi **0.3.7** atau **0.3.DL**). Keduanya memakai folder server yang sama, jadi gamemode (`.amx`) dan plugin (`.so`) tidak perlu diupload ulang saat berpindah.
+- Start / Stop / Restart server dari tombol atau dari notifikasi (aksi *Stop*).
+- Urutan start otomatis: MariaDB dulu, baru server game. Stop dilakukan terbalik.
 - Berjalan sebagai *foreground service* dengan wake lock, jadi server tetap hidup saat app di background.
-- Stop halus lewat perintah `exit` di stdin; kalau tidak merespons dalam 8 detik, proses dihentikan paksa.
+- Stop halus lewat perintah `exit` (stdin untuk open.mp, RCON untuk SA-MP); kalau tidak merespons dalam 8 detik, proses dihentikan paksa.
 
 **Dashboard**
 - Info server real-time lewat query UDP: nama, jumlah pemain, mode, bahasa, status password.
@@ -47,7 +48,7 @@ SQL console, serta backup/restore, semuanya dari satu aplikasi.
 **File manager**
 - Menjelajah folder server (`gamemodes/`, `filterscripts/`, `plugins/`, `scriptfiles/`, dst).
 - Upload file dari penyimpanan HP, buat file/folder, hapus, dan unzip arsip `.zip` langsung di HP.
-- Editor teks bawaan untuk `config.json` dan file teks lain (file biner/terlalu besar tidak bisa diedit).
+- Editor teks bawaan untuk `config.json` / `server.cfg` dan file teks lain (file biner/terlalu besar tidak bisa diedit).
 
 **Database**
 - MariaDB berjalan **native arm64** (tidak lewat emulasi), hanya listen di `127.0.0.1`.
@@ -56,10 +57,10 @@ SQL console, serta backup/restore, semuanya dari satu aplikasi.
 - SQL console (sebagai root), import `.sql`, dan export dump.
 
 **Setup & keamanan dasar**
-- Pemasangan rootfs, open.mp, dan MariaDB dengan satu tombol per langkah, ada log progres.
+- Pemasangan rootfs, server game (open.mp atau SA-MP), dan MariaDB dengan satu tombol per langkah, ada log progres.
 - Tes PRoot untuk game dan DB (`uname -a`) supaya masalah ketahuan sebelum server dijalankan.
 - Password RCON yang lemah (kosong, `changeme`, `password`, `1234`, `12345678`, `rcon`, `admin`, atau kurang dari 8 karakter) otomatis diganti dengan password acak.
-- Update open.mp **tidak menimpa** `config.json`, `gamemodes/`, `filterscripts/`, `scriptfiles/`, dan `plugins/`.
+- Update server **tidak menimpa** `config.json`, `server.cfg`, `gamemodes/`, `filterscripts/`, `scriptfiles/`, `npcmodes/`, `plugins/`, `models/`, dan `artconfig.txt`.
 - Shortcut ke pengaturan optimasi baterai.
 
 ---
@@ -71,7 +72,7 @@ SQL console, serta backup/restore, semuanya dari satu aplikasi.
 | Android | 8.0 (API 26) atau lebih baru |
 | Arsitektur | **arm64-v8a** saja |
 | Root | Tidak perlu |
-| Ruang kosong | ±600 MB (rootfs + open.mp + MariaDB) |
+| Ruang kosong | ±600 MB (rootfs + server game + MariaDB) |
 | Internet | Hanya saat pemasangan awal / update |
 | RAM | Disarankan 4 GB ke atas bila game dan DB jalan bersamaan |
 
@@ -90,12 +91,12 @@ SQL console, serta backup/restore, semuanya dari satu aplikasi.
 1. Buka app → tab **Setup**.
 2. Jalankan berurutan:
    1. **Pasang rootfs game**: mengunduh Debian i386 dari Docker Hub, lalu memasang `libatomic1`.
-   2. **Pasang open.mp**: mengunduh rilis terbaru `omp-server` (Linux x86).
+   2. **Pasang server game**: pilih mesinnya dulu di bagian **Mesin server**. open.mp mengunduh rilis terbaru `omp-server` (Linux x86), SA-MP mengunduh `samp03svr` (Linux 32-bit) sesuai versi yang dipilih (0.3.7 atau 0.3.DL). Untuk ganti versi, pilih versinya lalu tekan **Update**.
    3. **Pasang MariaDB** (opsional): mengunduh Alpine arm64 dan memasang paket `mariadb`.
 
    Jangan tutup app selama proses berjalan. Semuanya butuh internet.
 3. Tekan **Tes game** dan **Tes DB**. Output `uname -a` berarti PRoot berfungsi.
-4. Buka tab **Files**, upload gamemode (`.amx`) ke `gamemodes/`, lalu atur `pawn.main_scripts` di `config.json`.
+4. Buka tab **Files**, upload gamemode (`.amx`) ke `gamemodes/`, lalu daftarkan gamemode-nya: di `config.json` lewat `pawn.main_scripts` (open.mp), atau di `server.cfg` lewat baris `gamemode0 namagamemode 1` tanpa `.amx` (SA-MP).
 5. Buka tab **Dashboard** → **Start**.
 6. Tab **Database** menampilkan host, port, user, password, dan nama database.
 7. Matikan optimasi baterai untuk app ini (tombol di Setup), supaya Android tidak membunuh server.
@@ -120,7 +121,7 @@ public OnGameModeInit()
 
 Catatan plugin MySQL:
 - Harus build **Linux 32-bit** (game berjalan sebagai proses i386).
-- Taruh di folder `plugins/`, lalu daftarkan di `pawn.legacy_plugins` pada `config.json`.
+- Taruh di folder `plugins/`, lalu daftarkan di `pawn.legacy_plugins` pada `config.json` (open.mp) atau di baris `plugins` pada `server.cfg` (SA-MP, contoh: `plugins mysql.so streamer.so`).
 - Sesuaikan sintaks `mysql_connect` dengan versi plugin yang dipakai.
 
 ---
@@ -131,21 +132,25 @@ Di tab **Setup → Pengaturan server**:
 
 | Opsi | Default | Keterangan |
 |---|---|---|
-| Nama server | `OmpHub Server` | Ditulis ke `name` di `config.json` |
-| Max pemain | `50` | `max_players` |
-| Port UDP | `7777` | `network.port`, disinkronkan setiap kali server start |
+| Nama server | `OmpHub Server` | `name` di `config.json` (open.mp) / `hostname` di `server.cfg` (SA-MP) |
+| Max pemain | `50` | `max_players` / `maxplayers` |
+| Port UDP | `7777` | `network.port` / `port`, disinkronkan setiap kali server start |
 | Port DB | `3306` | Port MariaDB di `127.0.0.1` |
-| Jalankan MariaDB bersama server | aktif | Bila mati, Start hanya menjalankan open.mp |
+| Jalankan MariaDB bersama server | aktif | Bila mati, Start hanya menjalankan server game |
 
-Perubahan baru berlaku setelah server di-restart. Untuk opsi lanjutan, edit `config.json` lewat tab **Files**.
+Perubahan baru berlaku setelah server di-restart. Untuk opsi lanjutan, edit `config.json` (open.mp) atau `server.cfg` (SA-MP) lewat tab **Files**.
 
-Panel selalu memastikan RCON aktif (`rcon.enable = true`) dengan password yang kuat, karena RCON dipakai oleh tab Console.
+Panel selalu memastikan RCON aktif dengan password yang kuat (`rcon.enable = true` di open.mp, `rcon_password` di SA-MP), karena RCON dipakai oleh tab Console. Untuk SA-MP, panel juga memastikan `query 1` supaya Dashboard bisa membaca info server dan pemain.
+
+Mesin server hanya bisa diganti saat server berhenti.
 
 **URL unduhan** (Setup → URL unduhan) bisa diganti tanpa build ulang bila link default berubah:
 
 | Komponen | Default |
 |---|---|
 | open.mp (Linux x86, `.tar.gz`) | rilis terbaru di `github.com/openmultiplayer/open.mp` |
+| SA-MP 0.3.7 server Linux (`.tar.gz`) | `samp037svr_R2-2-1.tar.gz` dari `gta-multiplayer.cz` |
+| SA-MP 0.3.DL server Linux (`.tar.gz`) | `samp03DLsvr_R1.tar.gz` dari `archive.org/download/sa-mp-0.3.dl` |
 | Alpine aarch64 minirootfs (`.tar.gz`) | Alpine 3.20.3 |
 
 ---
@@ -169,7 +174,7 @@ Semua data ada di penyimpanan privat app (`/data/data/<package>/files/`):
 
 | Path | Isi |
 |---|---|
-| `server/` | open.mp, `config.json`, `gamemodes/`, `plugins/`, dst. (di-bind ke `/server`) |
+| `server/` | open.mp / SA-MP, `config.json` / `server.cfg`, `gamemodes/`, `plugins/`, dst. (di-bind ke `/server`) |
 | `rootfs/game/` | Debian i386 |
 | `rootfs/db/` | Alpine arm64 + MariaDB |
 | `db/data/` | Datadir MariaDB (di-bind ke `/var/lib/mysql`, tetap ada bila rootfs dipasang ulang) |
@@ -213,9 +218,13 @@ Poin penting:
 | Gejala | Kemungkinan penyebab / solusi |
 |---|---|
 | **Tes game** gagal | Seccomp/SELinux beberapa ROM memblokir syscall untuk `qemu-i386`. Lihat pesan error di log Setup. |
-| Pemasangan rootfs/open.mp gagal | Cek koneksi. Untuk open.mp, URL bisa diganti di Setup → URL unduhan. |
+| Pemasangan rootfs/server gagal | Cek koneksi. URL open.mp dan SA-MP bisa diganti di Setup → URL unduhan. |
 | `omp-server tidak ada di arsip` | URL open.mp salah / format rilis berubah. Ganti URL ke arsip Linux x86 `.tar.gz`. |
-| Dashboard terus "Menunggu respons query UDP" | Server belum siap, atau query tidak aktif di `config.json` open.mp. |
+| `samp03svr tidak ada di arsip` | URL SA-MP salah. Ganti ke arsip server Linux `.tar.gz` (misalnya `samp037svr_R2-1.tar.gz` atau `samp03DLsvr_R1.tar.gz`). |
+| SA-MP 0.3.DL: model custom tidak sampai ke pemain | Pastikan `useartwork 1` dan `artpath models` ada di `server.cfg`, serta `artconfig.txt` dan folder `models/` sudah diupload. Server DL melayani model lewat TCP di port yang sama dengan UDP. |
+| SA-MP: log di Console kosong atau terlambat | Buka `server_log.txt` lewat tab Files. |
+| SA-MP: perintah di Console tidak jalan | Perintah dikirim lewat RCON, jadi pastikan `rcon_password` di `server.cfg` valid dan server sudah berjalan. |
+| Dashboard terus "Menunggu respons query UDP" | Server belum siap, atau query tidak aktif (`config.json` untuk open.mp, `query 1` di `server.cfg` untuk SA-MP). |
 | Console RCON: "tidak ada balasan" | RCON mati, password salah, atau server tidak berjalan. |
 | Gamemode tidak bisa konek DB | Pakai `127.0.0.1`, pastikan MariaDB berstatus *running*, cek password di tab Database. |
 | Plugin gagal dimuat | Plugin harus Linux **32-bit** dan terdaftar di `pawn.legacy_plugins`. |
@@ -231,8 +240,9 @@ Poin penting:
 2. **Hanya arm64**: HP 32-bit atau x86 tidak didukung.
 3. **Kompatibilitas per perangkat**: PRoot di Android sangat bergantung pada seccomp/SELinux tiap ROM.
    Hasil bisa berbeda antar merek dan versi Android. Gunakan tombol **Tes game** / **Tes DB** sebelum memakai.
-4. **Key `config.json` open.mp** yang disentuh panel: `name`, `max_players`, `network.port`, `rcon.enable`,
-   `rcon.password`, `pawn.legacy_plugins`. Cocokkan dengan versi open.mp yang kamu pakai.
+4. **Key config yang disentuh panel.** open.mp (`config.json`): `name`, `max_players`, `network.port`, `rcon.enable`,
+   `rcon.password`, `pawn.legacy_plugins`. SA-MP (`server.cfg`): `hostname`, `maxplayers`, `port`, `rcon_password`, `query`.
+   Baris lain tidak diubah.
 5. **Keamanan**: MariaDB hanya listen di `127.0.0.1`, tapi port game (UDP) terbuka di jaringan yang sama.
    Jangan expose port ke internet tanpa memahami risikonya, dan jangan bagikan isi tab Database.
 6. **Lalu lintas cleartext** (`usesCleartextTraffic`) diaktifkan karena unduhan bisa lewat URL kustom.
@@ -241,7 +251,7 @@ Poin penting:
 
 ## Atribusi & lisensi komponen
 
-Aplikasi ini membawa dan/atau mengunduh komponen pihak ketiga (PRoot, talloc, QEMU, open.mp, MariaDB,
+Aplikasi ini membawa dan/atau mengunduh komponen pihak ketiga (PRoot, talloc, QEMU, open.mp, server SA-MP, MariaDB,
 Debian, Alpine, dan lainnya) yang masing-masing memiliki lisensi sendiri. Daftar lengkapnya ada di
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 

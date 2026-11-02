@@ -58,13 +58,13 @@ fun DashboardScreen() {
             Section("Belum siap") {
                 if (!st.binaries) Text("• Binary proot/qemu tidak ada di APK. Jalankan scripts/fetch-binaries.sh lalu build ulang.")
                 if (!st.gameRootfs) Text("• Rootfs game belum dipasang (tab Setup).")
-                if (!st.openMp) Text("• open.mp belum dipasang (tab Setup).")
+                if (!st.serverInstalled) Text("• ${st.engine.label} belum dipasang (tab Setup).")
             }
         }
 
         Section("Kontrol") {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StateChip("open.mp", game)
+                StateChip(st.engine.label, game)
                 StateChip("MariaDB", db)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -90,7 +90,7 @@ fun DashboardScreen() {
             } else if (i == null) {
                 Text("Menunggu respons query UDP...")
                 Text(
-                    "Kalau terus kosong: pastikan query aktif di config.json open.mp.",
+                    "Kalau terus kosong: pastikan query aktif di ${st.engine.configName}.",
                     style = MaterialTheme.typography.bodySmall
                 )
             } else {

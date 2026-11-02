@@ -10,7 +10,7 @@ import java.io.File
  * Nama key mengikuti docs open.mp (name, max_players, network.port, rcon.*, pawn.*).
  * Verifikasi ke versi yang dipakai: lihat config.json yang di-generate omp-server.
  */
-class OpenMpConfig(private val file: File) {
+class OpenMpConfig(private val file: File) : ServerConfig {
     private var root = JSONObject()
 
     fun load(): OpenMpConfig {
@@ -18,7 +18,7 @@ class OpenMpConfig(private val file: File) {
         return this
     }
 
-    fun save() {
+    override fun save() {
         file.parentFile?.mkdirs()
         file.writeText(root.toString(2))
     }
@@ -28,15 +28,15 @@ class OpenMpConfig(private val file: File) {
         return JSONObject().also { root.put(name, it) }
     }
 
-    var hostName: String
+    override var hostName: String
         get() = root.optString("name", "open.mp server")
         set(v) { root.put("name", v) }
 
-    var maxPlayers: Int
+    override var maxPlayers: Int
         get() = root.optInt("max_players", 50)
         set(v) { root.put("max_players", v) }
 
-    var port: Int
+    override var port: Int
         get() = section("network").optInt("port", 7777)
         set(v) { section("network").put("port", v) }
 
@@ -44,7 +44,7 @@ class OpenMpConfig(private val file: File) {
         get() = section("rcon").optBoolean("enable", false)
         set(v) { section("rcon").put("enable", v) }
 
-    var rconPassword: String
+    override var rconPassword: String
         get() = section("rcon").optString("password", "")
         set(v) { section("rcon").put("password", v) }
 
@@ -57,7 +57,7 @@ class OpenMpConfig(private val file: File) {
     }
 
     /** Ganti password RCON yang lemah. Return true bila diganti. */
-    fun ensureStrongRcon(): Boolean {
+    override fun ensureStrongRcon(): Boolean {
         val p = rconPassword
         val weak = p.length < 8 || p.lowercase() in WEAK
         if (weak) rconPassword = randomToken(16)
@@ -73,11 +73,11 @@ class OpenMpConfig(private val file: File) {
 }
 
 object OpenMpInstaller {
-    private val KEEP_IF_EXISTS = listOf("config.json", "gamemodes/", "filterscripts/", "scriptfiles/", "plugins/")
+    private val KEEP_IF_EXISTS = listOf("config.json", "server.cfg", "gamemodes/", "filterscripts/", "scriptfiles/", "plugins/", "npcmodes/", "models/", "artconfig.txt")
 
-    private fun keep(rel: String) = KEEP_IF_EXISTS.any { rel == it || rel.startsWith(it) }
+    internal fun keep(rel: String) = KEEP_IF_EXISTS.any { rel == it || rel.startsWith(it) }
 
-    private fun mergeCopy(src: File, dst: File, rel: String = "") {
+    internal fun mergeCopy(src: File, dst: File, rel: String = "") {
         dst.mkdirs()
         src.listFiles()?.forEach { f ->
             val r = if (rel.isEmpty()) f.name else "$rel/${f.name}"
@@ -135,7 +135,9 @@ object OpenMpInstaller {
 
     /** ZIP/restore menghilangkan bit executable; set ulang. */
     fun fixPerms() {
-        File(Env.serverDir, "omp-server").takeIf { it.exists() }?.setExecutable(true, false)
+        listOf("omp-server", "samp03svr", "announce", "samp-npc").forEach { n ->
+            File(Env.serverDir, n).takeIf { it.exists() }?.setExecutable(true, false)
+        }
         listOf("components", "plugins").forEach { d ->
             File(Env.serverDir, d).walkTopDown().filter { it.isFile && it.name.endsWith(".so") }
                 .forEach { it.setExecutable(true, false) }

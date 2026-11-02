@@ -51,6 +51,8 @@ fun SetupScreen() {
     val game by Controller.gameState.collectAsStateWithLifecycle()
     var backups by remember { mutableStateOf(Controller.listBackups()) }
     var tick by remember { mutableIntStateOf(0) }
+    var sampVer by remember { mutableStateOf(Prefs.sampVersion) }
+    val serverName = if (st.engine == ServerType.SAMP) "SA-MP ${sampVer.label}" else st.engine.label
 
     LaunchedEffect(tick, busy) {
         Controller.refreshStatus()
@@ -60,6 +62,44 @@ fun SetupScreen() {
     fun mark(ok: Boolean) = if (ok) "✓ " else "✗ "
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        Section("Mesin server") {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ServerType.entries.forEach { t ->
+                    val pick: () -> Unit = { Prefs.serverType = t; Controller.refreshStatus() }
+                    if (st.engine == t) {
+                        Button(onClick = pick, enabled = game == RunState.STOPPED) { Text(t.label) }
+                    } else {
+                        OutlinedButton(onClick = pick, enabled = game == RunState.STOPPED) { Text(t.label) }
+                    }
+                }
+            }
+            if (st.engine == ServerType.SAMP) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SampVersion.entries.forEach { v ->
+                        val pickV: () -> Unit = { Prefs.sampVersion = v; sampVer = v }
+                        if (sampVer == v) {
+                            Button(onClick = pickV, enabled = game == RunState.STOPPED) { Text(v.label) }
+                        } else {
+                            OutlinedButton(onClick = pickV, enabled = game == RunState.STOPPED) { Text(v.label) }
+                        }
+                    }
+                }
+                val installedV = remember(st, sampVer, busy) { SampInstaller.installedVersion() }
+                Text(
+                    when {
+                        installedV == null -> "Server SA-MP belum terpasang."
+                        installedV != sampVer -> "Terpasang: SA-MP ${installedV.label}. Tekan Update di langkah pemasangan untuk ganti ke ${sampVer.label}."
+                        else -> "Terpasang: SA-MP ${installedV.label}."
+                    },
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+            Text(
+                "open.mp dan SA-MP memakai folder server yang sama, jadi gamemode (.amx) dan plugin (.so) tidak perlu diupload ulang saat berpindah. Hentikan server dulu untuk mengganti mesin.",
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
+
         Section("Langkah pemasangan") {
             Text(mark(st.binaries) + "Binary proot + qemu (ada di APK)")
             if (!st.binaries) {
@@ -75,9 +115,9 @@ fun SetupScreen() {
             Button(onClick = { Controller.installGameRootfs() }, enabled = !busy && game == RunState.STOPPED && st.binaries) {
                 Text(if (st.gameRootfs) "Pasang ulang rootfs" else "1. Pasang rootfs game")
             }
-            Text(mark(st.openMp) + "open.mp (omp-server)")
-            Button(onClick = { Controller.installOpenMp() }, enabled = !busy && game == RunState.STOPPED) {
-                Text(if (st.openMp) "Update open.mp" else "2. Pasang open.mp")
+            Text(mark(st.serverInstalled) + "$serverName (${st.engine.binary})")
+            Button(onClick = { Controller.installServer() }, enabled = !busy && game == RunState.STOPPED) {
+                Text(if (st.serverInstalled) "Update $serverName" else "2. Pasang $serverName")
             }
             Text(mark(st.db) + "MariaDB (opsional)")
             Button(onClick = { Controller.installDb() }, enabled = !busy && st.binaries) {
@@ -107,10 +147,8 @@ fun SetupScreen() {
             var hostName by remember { mutableStateOf("") }
             var maxPlayers by remember { mutableStateOf("") }
 
-            LaunchedEffect(st.openMp) {
-                val f = File(Env.serverDir, "config.json")
-                if (f.exists()) {
-                    val c = OpenMpConfig(f).load()
+            LaunchedEffect(st.serverInstalled, st.engine) {
+                openServerConfig(st.engine)?.let { c ->
                     hostName = c.hostName
                     maxPlayers = c.maxPlayers.toString()
                 }
@@ -131,9 +169,7 @@ fun SetupScreen() {
                     Prefs.port = port.toIntOrNull()?.coerceIn(1024, 65535) ?: 7777
                     Prefs.dbPort = dbPort.toIntOrNull()?.coerceIn(1024, 65535) ?: 3306
                     Prefs.dbEnabled = dbOn
-                    val f = File(Env.serverDir, "config.json")
-                    if (f.exists()) {
-                        val c = OpenMpConfig(f).load()
+                    openServerConfig(Prefs.serverType)?.let { c ->
                         if (hostName.isNotBlank()) c.hostName = hostName
                         c.maxPlayers = maxPlayers.toIntOrNull()?.coerceIn(1, 1000) ?: 50
                         c.port = Prefs.port
@@ -143,7 +179,7 @@ fun SetupScreen() {
                 },
                 enabled = game == RunState.STOPPED
             ) { Text("Simpan") }
-            Text("Edit lanjutan: tab Files > config.json", style = MaterialTheme.typography.bodySmall)
+            Text("Edit lanjutan: tab Files > ${st.engine.configName}", style = MaterialTheme.typography.bodySmall)
         }
 
         Section("Backup") {
@@ -186,13 +222,19 @@ fun SetupScreen() {
             var u1 by remember { mutableStateOf(Prefs.urlGameRootfs) }
             var u2 by remember { mutableStateOf(Prefs.urlOpenMp) }
             var u3 by remember { mutableStateOf(Prefs.urlAlpine) }
+            var u4 by remember { mutableStateOf(Prefs.urlSamp) }
+            var u5 by remember { mutableStateOf(Prefs.urlSampDl) }
             OutlinedTextField(u1, { u1 = it; Prefs.urlGameRootfs = it.trim() }, label = { Text("Rootfs Debian i386 (.tar.xz/.tar.gz)") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(u2, { u2 = it; Prefs.urlOpenMp = it.trim() }, label = { Text("open.mp Linux x86 (.tar.gz)") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(u4, { u4 = it; Prefs.urlSamp = it.trim() }, label = { Text("SA-MP 0.3.7 server Linux (.tar.gz)") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(u5, { u5 = it; Prefs.urlSampDl = it.trim() }, label = { Text("SA-MP 0.3.DL server Linux (.tar.gz)") }, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(u3, { u3 = it; Prefs.urlAlpine = it.trim() }, label = { Text("Alpine aarch64 minirootfs (.tar.gz)") }, modifier = Modifier.fillMaxWidth())
             OutlinedButton(onClick = {
                 Prefs.urlGameRootfs = Prefs.DEF_ROOTFS_GAME; u1 = Prefs.DEF_ROOTFS_GAME
                 Prefs.urlOpenMp = Prefs.DEF_OPENMP; u2 = Prefs.DEF_OPENMP
                 Prefs.urlAlpine = Prefs.DEF_ALPINE; u3 = Prefs.DEF_ALPINE
+                Prefs.urlSamp = Prefs.DEF_SAMP; u4 = Prefs.DEF_SAMP
+                Prefs.urlSampDl = Prefs.DEF_SAMP_DL; u5 = Prefs.DEF_SAMP_DL
             }) { Text("Reset ke default") }
         }
 

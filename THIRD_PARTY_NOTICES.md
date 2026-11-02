@@ -8,6 +8,7 @@ APK ini membawa / mengunduh komponen berikut. Masing-masing punya lisensi sendir
 | talloc | paket Termux | LGPL-3.0-or-later |
 | QEMU user-mode (qemu-i386-static) | paket Debian `qemu-user-static` | GPL-2.0 (dan lainnya) |
 | open.mp server | github.com/openmultiplayer/open.mp | MPL-2.0 |
+| SA-MP server 0.3.7 / 0.3.DL (`samp03svr`, opsional) | diunduh saat setup dari URL yang bisa diatur; tidak dibundel di APK | Freeware, hak cipta SA-MP Team; ikuti ketentuan dari sa-mp.com |
 | MariaDB | Alpine Linux (diunduh saat setup) | GPL-2.0 |
 | Debian i386 rootfs | debuerreotype / Debian (diunduh saat setup) | berbagai (DFSG) |
 | Alpine minirootfs | alpinelinux.org (diunduh saat setup) | berbagai |

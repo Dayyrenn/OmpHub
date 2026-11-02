@@ -76,7 +76,7 @@ class ServerService : Service() {
         watching = true
         scope.launch {
             Controller.gameState.combine(Controller.dbState) { g, d -> g to d }.collect { (g, d) ->
-                val text = "open.mp: ${g.name.lowercase()}  |  MariaDB: ${d.name.lowercase()}"
+                val text = "${Prefs.serverType.label}: ${g.name.lowercase()}  |  MariaDB: ${d.name.lowercase()}"
                 getSystemService(NotificationManager::class.java).notify(NOTIF_ID, notification(text))
                 maybeStop()
             }

@@ -23,9 +23,13 @@ data class SetupStatus(
     val binaries: Boolean = false,
     val gameRootfs: Boolean = false,
     val openMp: Boolean = false,
-    val db: Boolean = false
+    val samp: Boolean = false,
+    val db: Boolean = false,
+    val engine: ServerType = ServerType.OMP
 ) {
-    val ready get() = binaries && gameRootfs && openMp
+    /** Server terpilih ([engine]) sudah terpasang. */
+    val serverInstalled get() = if (engine == ServerType.SAMP) samp else openMp
+    val ready get() = binaries && gameRootfs && serverInstalled
 }
 
 /** Pusat state aplikasi. Proses hidup di sini (bukan di UI) dan dijaga oleh ServerService. */
@@ -42,6 +46,7 @@ object Controller {
     val setupStatus = MutableStateFlow(SetupStatus())
 
     @Volatile private var gameProc: Process? = null
+    @Volatile private var runningType = ServerType.OMP
     @Volatile private var gameStdin: BufferedWriter? = null
 
     // ---------- Status ----------
@@ -50,8 +55,10 @@ object Controller {
         setupStatus.value = SetupStatus(
             binaries = Env.binariesOk(),
             gameRootfs = File(Env.rootfsGame, "usr/bin/env").exists(),
-            openMp = File(Env.serverDir, "omp-server").exists(),
-            db = MariaDb.installed && MariaDb.initialized
+            openMp = ServerType.OMP.installed,
+            samp = ServerType.SAMP.installed,
+            db = MariaDb.installed && MariaDb.initialized,
+            engine = Prefs.serverType
         )
     }
 
@@ -83,28 +90,27 @@ object Controller {
             gameLog.add("[panel] Binary proot/qemu tidak ada di APK. Jalankan scripts/fetch-binaries.sh lalu build ulang.")
             return@withContext
         }
-        if (!st.gameRootfs || !st.openMp) {
-            gameLog.add("[panel] Rootfs/open.mp belum terpasang. Buka tab Setup.")
+        val type = st.engine
+        if (!st.gameRootfs || !st.serverInstalled) {
+            gameLog.add("[panel] Rootfs/${type.label} belum terpasang. Buka tab Setup.")
             return@withContext
         }
         gameState.value = RunState.STARTING
         try {
-            ensureGameDeps { gameLog.add(it) }
+            // libatomic1 hanya dibutuhkan omp-server
+            if (type == ServerType.OMP) ensureGameDeps { gameLog.add(it) }
 
             // Sinkronkan port & pastikan RCON aktif dengan password kuat
-            val cfg = OpenMpConfig(File(Env.serverDir, "config.json")).load()
-            cfg.port = Prefs.port
-            cfg.rconEnabled = true
-            if (cfg.ensureStrongRcon()) gameLog.add("[panel] Password RCON lemah diganti otomatis.")
-            cfg.save()
+            syncServerConfig(type)
             OpenMpInstaller.fixPerms()
 
             val pb = Proot.build(
-                Proot.Target.GAME, listOf("./omp-server"), "/server",
+                Proot.Target.GAME, listOf("./${type.binary}"), "/server",
                 listOf(Env.serverDir.absolutePath to "/server")
             )
             pb.redirectErrorStream(true)
-            gameLog.add("[panel] Menjalankan omp-server di port ${Prefs.port}...")
+            runningType = type
+            gameLog.add("[panel] Menjalankan ${type.binary} (${type.label}) di port ${Prefs.port}...")
             val p = pb.start()
             gameProc = p
             gameStdin = p.outputStream.bufferedWriter()
@@ -112,7 +118,7 @@ object Controller {
             thread(name = "omp-log", isDaemon = true) {
                 p.inputStream.bufferedReader().forEachLine { gameLog.add(it) }
                 val code = p.waitFor()
-                gameLog.add("[panel] omp-server berhenti (exit $code)")
+                gameLog.add("[panel] ${type.binary} berhenti (exit $code)")
                 gameProc = null
                 gameStdin = null
                 gameState.value = RunState.STOPPED
@@ -126,7 +132,9 @@ object Controller {
     suspend fun stopGame(): Unit = withContext(Dispatchers.IO) {
         val p = gameProc ?: run { gameState.value = RunState.STOPPED; return@withContext }
         gameState.value = RunState.STOPPING
-        runCatching { gameStdin?.apply { write("exit\n"); flush() } }
+        // Server SA-MP Linux tidak membaca stdin, jadi dihentikan lewat RCON
+        if (runningType == ServerType.SAMP) runCatching { rcon("exit") }
+        else runCatching { gameStdin?.apply { write("exit\n"); flush() } }
         if (!p.waitFor(8, TimeUnit.SECONDS)) {
             p.destroy()
             if (!p.waitFor(5, TimeUnit.SECONDS)) p.destroyForcibly()
@@ -135,6 +143,13 @@ object Controller {
 
     fun sendStdin(line: String) {
         gameLog.add("> $line")
+        if (runningType == ServerType.SAMP && gameProc?.isAlive == true) {
+            // Server SA-MP Linux tidak membaca stdin; perintah dikirim lewat RCON
+            val out = rcon(line)
+            if (out.isEmpty()) gameLog.add("[rcon] tidak ada balasan (RCON mati / password salah / server mati)")
+            out.forEach { gameLog.add(it) }
+            return
+        }
         try {
             gameStdin?.apply { write(line + "\n"); flush() }
                 ?: gameLog.add("[panel] Server tidak berjalan")
@@ -144,8 +159,29 @@ object Controller {
     }
 
     fun rcon(cmd: String): List<String> {
-        val pass = OpenMpConfig(File(Env.serverDir, "config.json")).load().rconPassword
+        val type = if (gameProc?.isAlive == true) runningType else Prefs.serverType
+        val pass = openServerConfig(type)?.rconPassword.orEmpty()
         return Samp.rcon(Prefs.port, pass, cmd)
+    }
+
+    /** Sinkronkan port, query, dan password RCON di file config mesin [type]. */
+    private fun syncServerConfig(type: ServerType) {
+        when (type) {
+            ServerType.OMP -> {
+                val cfg = OpenMpConfig(type.configFile).load()
+                cfg.port = Prefs.port
+                cfg.rconEnabled = true
+                if (cfg.ensureStrongRcon()) gameLog.add("[panel] Password RCON lemah diganti otomatis.")
+                cfg.save()
+            }
+            ServerType.SAMP -> {
+                val cfg = SampConfig(type.configFile).load()
+                cfg.port = Prefs.port
+                cfg.ensureQuery()
+                if (cfg.ensureStrongRcon()) gameLog.add("[panel] Password RCON lemah diganti otomatis.")
+                cfg.save()
+            }
+        }
     }
 
     // ---------- MariaDB ----------
@@ -246,9 +282,15 @@ object Controller {
         ensureGameDeps { setupLog.add(it) }
     }
 
-    private fun doInstallOpenMp() {
+    private fun doInstallServer() {
         check(gameState.value == RunState.STOPPED) { "Hentikan server dulu" }
-        OpenMpInstaller.install(Prefs.urlOpenMp) { setupLog.add(it) }
+        when (Prefs.serverType) {
+            ServerType.OMP -> OpenMpInstaller.install(Prefs.urlOpenMp) { setupLog.add(it) }
+            ServerType.SAMP -> {
+                val v = Prefs.sampVersion
+                SampInstaller.install(Prefs.sampUrl(v), v) { setupLog.add(it) }
+            }
+        }
     }
 
     private fun doInstallDb() {
@@ -257,17 +299,17 @@ object Controller {
     }
 
     fun installGameRootfs() = runSetup("Pasang rootfs game (Debian i386)") { doInstallGameRootfs() }
-    fun installOpenMp() = runSetup("Pasang / update open.mp") { doInstallOpenMp() }
+    fun installServer() = runSetup("Pasang / update ${serverLabel()}") { doInstallServer() }
     fun installDb() = runSetup("Pasang MariaDB") { doInstallDb() }
 
-    /** Pasang semua komponen yang belum ada, berurutan: rootfs game, open.mp, lalu MariaDB (bila aktif). */
+    /** Pasang semua komponen yang belum ada, berurutan: rootfs game, server terpilih, lalu MariaDB (bila aktif). */
     fun installAll() = runSetup("Pasang semua komponen") {
         check(Env.binariesOk()) { "Binary proot/qemu belum ada di APK" }
         check(gameState.value == RunState.STOPPED && dbState.value == RunState.STOPPED) { "Hentikan server dulu" }
         refreshStatus()
         if (!setupStatus.value.gameRootfs) doInstallGameRootfs()
         refreshStatus()
-        if (!setupStatus.value.openMp) doInstallOpenMp()
+        if (!setupStatus.value.serverInstalled) doInstallServer()
         refreshStatus()
         if (Prefs.dbEnabled && !setupStatus.value.db) doInstallDb()
     }

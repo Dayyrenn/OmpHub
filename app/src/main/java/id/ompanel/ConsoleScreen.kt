@@ -32,6 +32,7 @@ import kotlinx.coroutines.launch
 fun ConsoleScreen() {
     val lines by Controller.gameLog.lines.collectAsStateWithLifecycle()
     val game by Controller.gameState.collectAsStateWithLifecycle()
+    val st by Controller.setupStatus.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var input by remember { mutableStateOf("") }
     var mode by remember { mutableIntStateOf(0) } // 0 = stdin, 1 = RCON
@@ -56,7 +57,7 @@ fun ConsoleScreen() {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = mode == 0, onClick = { mode = 0 }, label = { Text("stdin") })
             FilterChip(selected = mode == 1, onClick = { mode = 1 }, label = { Text("RCON") })
-            Text("open.mp: ${game.name.lowercase()}", modifier = Modifier.weight(1f))
+            Text("${st.engine.label}: ${game.name.lowercase()}", modifier = Modifier.weight(1f))
             IconButton(onClick = { Controller.gameLog.clear() }) { Icon(Icons.Default.Delete, "Bersihkan") }
         }
         LogView(lines, Modifier.weight(1f).fillMaxWidth())
