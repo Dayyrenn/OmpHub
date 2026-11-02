@@ -266,14 +266,14 @@ object Controller {
         // (app ditutup / dibunuh di tengah jalan) tidak pernah dianggap sudah terpasang.
         val staging = File(Env.rootfsGame.parentFile, "game.tmp")
         deleteTree(staging)
-        val archive = File(Env.dlDir, "rootfs-game.tar.xz")
+        val archive = File(Env.dlDir, "rootfs-game.tar.gz")
 
         // 1) Pakai rootfs yang dibundel di APK (tanpa internet). Kalau tidak ada, unduh dari Docker Hub.
         var lastCount = 0
         val onEntry: (Int) -> Unit = { n ->
             if (n - lastCount >= 1000) { lastCount = n; setupLog.add("  $n entri") }
         }
-        if (Env.copyAsset("rootfs-game.tar.xz", archive)) {
+        if (Env.copyAsset("rootfs-game.tar.gz", archive)) {
             setupLog.add("Memakai rootfs Debian i386 bawaan APK")
             setupLog.add("Mengekstrak (bisa 1-3 menit)...")
             Extractor.extractTar(archive, staging, onProgress = onEntry)

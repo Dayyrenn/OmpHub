@@ -116,34 +116,23 @@ cp -L "$FOUND" "$DEST/libqemu-i386.so"
 # ---------------------------------------------------------------------------
 ASSETS="$ROOT/app/src/main/assets"
 mkdir -p "$ASSETS"
-echo ">> Rootfs Debian i386 (bundel APK)"
-curl -fsSL "https://raw.githubusercontent.com/debuerreotype/docker-debian-artifacts/dist-i386/bookworm/slim/rootfs.tar.xz" \
-  -o "$ASSETS/rootfs-game.tar.xz"
-xz -t "$ASSETS/rootfs-game.tar.xz" 2>/dev/null || tar -tJf "$ASSETS/rootfs-game.tar.xz" >/dev/null \
-  || { echo "rootfs-game.tar.xz rusak"; exit 1; }
+echo ">> Rootfs Debian i386 (bundel APK, dari Docker Hub)"
+command -v jq >/dev/null || { echo "Butuh 'jq'"; exit 1; }
+REPO="i386/debian"; TAG="bookworm-slim"
+REG="https://registry-1.docker.io/v2/$REPO"
+ACCEPT="application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json"
+TOKEN=$(curl -fsSL "https://auth.docker.io/token?service=registry.docker.io&scope=repository:$REPO:pull" | jq -r .token)
+dh() { curl -fsSL -H "Authorization: Bearer $TOKEN" -H "Accept: $ACCEPT" "$@"; }
 
-echo ">> libatomic1 i386 (bundel APK)"
-GCC_POOL="https://deb.debian.org/debian/pool/main/g/gcc-12"
-ATOMIC_DEB=$(curl -fsSL "$GCC_POOL/" | grep -o 'libatomic1_12[^"]*_i386\.deb' | sort -uV | tail -n1)
-[ -n "$ATOMIC_DEB" ] || { echo "libatomic1 i386 tidak ditemukan di $GCC_POOL"; exit 1; }
-echo "   $ATOMIC_DEB"
-curl -fsSL "$GCC_POOL/$ATOMIC_DEB" -o "$WORK/libatomic1.deb"
-mkdir -p "$WORK/atomic"
-( cd "$WORK/atomic" && ar x ../libatomic1.deb )
-DATA=$(ls "$WORK"/atomic/data.tar.* | head -n1)
-case "$DATA" in
-  *.xz) cp "$DATA" "$ASSETS/libatomic1-i386.tar.xz" ;;
-  *)    tar -xf "$DATA" -C "$WORK/atomic" --one-top-level=content 2>/dev/null || { mkdir -p "$WORK/atomic/content"; tar -xf "$DATA" -C "$WORK/atomic/content"; }
-        tar -C "$WORK/atomic/content" -cJf "$ASSETS/libatomic1-i386.tar.xz" . ;;
-esac
-tar -tJf "$ASSETS/libatomic1-i386.tar.xz" | grep -q 'libatomic\.so\.1' || { echo "libatomic.so.1 tidak ada di arsip"; exit 1; }
-echo ">> Server game (bundel APK)"
-curl -fsSL "https://github.com/openmultiplayer/open.mp/releases/latest/download/open.mp-linux-x86.tar.gz" \
-  -o "$ASSETS/openmp-linux-x86.tar.gz"
-curl -fsSL "https://sa-mp.co.id/files/samp037svr_R2-2-1.tar.gz" -o "$ASSETS/samp037svr.tar.gz"
-curl -fsSL "https://sa-mp.co.id/files/samp03DLsvr_R1.tar.gz"    -o "$ASSETS/samp03DLsvr.tar.gz"
-for f in openmp-linux-x86 samp037svr samp03DLsvr; do
-  tar -tzf "$ASSETS/$f.tar.gz" >/dev/null || { echo "$f.tar.gz rusak"; exit 1; }
+MANIFEST=$(dh "$REG/manifests/$TAG")
+if echo "$MANIFEST" | jq -e 'has("manifests")' >/dev/null; then
+  DIGEST=$(echo "$MANIFEST" | jq -r '[.manifests[] | select(.platform.os=="linux" and .platform.architecture=="386")][0].digest')
+  [ -n "$DIGEST" ] && [ "$DIGEST" != "null" ] || { echo "linux/386 tidak ada di $REPO:$TAG"; exit 1; }
+  MANIFEST=$(dh "$REG/manifests/$DIGEST")
+fi
+LAYER=$(echo "$MANIFEST" | jq -r '.layers[0].digest')
+dh "$REG/blobs/$LAYER" -o "$ASSETS/rootfs-game.tar.gz"
+tar -tzf "$ASSETS/rootfs-game.tar.gz" >/dev/null || { echo "rootfs-game.tar.gz rusak"; exit 1; }
 done
 
 # mariadb-rootfs.tar.xz dibuat terpisah oleh scripts/build-mariadb-rootfs.sh (butuh docker + qemu arm64)
