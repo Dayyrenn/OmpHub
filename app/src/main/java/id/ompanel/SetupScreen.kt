@@ -113,9 +113,9 @@ fun SetupScreen() {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 EngineCard(
                     "open.mp", "Modern & open-source",
-                    selected = st.engine == ServerType.OPENMP,
+                    selected = st.engine == ServerType.OMP,
                     enabled = game == RunState.STOPPED,
-                    onClick = { Prefs.serverType = ServerType.OPENMP; Controller.refreshStatus() },
+                    onClick = { Prefs.serverType = ServerType.OMP; Controller.refreshStatus() },
                     modifier = Modifier.weight(1f)
                 )
                 EngineCard(
