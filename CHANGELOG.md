@@ -2,7 +2,7 @@
 
 Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.0.0/).
 
-## [Belum dirilis]
+## [v1.1.1]
 
 ### Ditambahkan
 - Kartu "Performa" di Dashboard: CPU, RAM, thread, dan uptime per komponen (server game, MariaDB, panel) lengkap dengan grafik ~2 menit terakhir.

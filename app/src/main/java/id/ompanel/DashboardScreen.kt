@@ -3,11 +3,24 @@ package id.omphub
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.Speed
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
@@ -19,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
@@ -59,71 +73,110 @@ fun DashboardScreen() {
         queryMs = null
     }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Text(
-            "OmpHub",
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp)
-        )
+    Column(
+        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Spacer(Modifier.height(8.dp))
+        Column {
+            Text("OmpHub", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Text(
+                "Server manager",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(Modifier.height(4.dp))
 
         if (!st.ready) {
-            Section("Belum siap") {
-                if (!st.binaries) Text("• Binary proot/qemu tidak ada di APK. Jalankan scripts/fetch-binaries.sh lalu build ulang.")
-                if (!st.gameRootfs) Text("• Rootfs game belum dipasang (tab Setup).")
-                if (!st.serverInstalled) Text("• ${st.engine.label} belum dipasang (tab Setup).")
+            ModernCard("Belum siap", icon = Icons.Default.Warning) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (!st.binaries) Text("• Binary proot/qemu tidak ada di APK. Jalankan scripts/fetch-binaries.sh lalu build ulang.")
+                    if (!st.gameRootfs) Text("• Rootfs game belum dipasang (tab Setup).")
+                    if (!st.serverInstalled) Text("• ${st.engine.label} belum dipasang (tab Setup).")
+                }
             }
         }
 
-        Section("Kontrol") {
+        ModernCard("Kontrol", icon = Icons.Default.PlayArrow) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 StateChip(st.engine.label, game)
                 StateChip("MariaDB", db)
             }
+            Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Button(
                     onClick = { ServerService.send(ctx, ServerService.ACTION_START) },
                     enabled = st.ready && game == RunState.STOPPED
-                ) { Text("Start") }
+                ) {
+                    Icon(Icons.Default.PlayArrow, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp)); Text("Start")
+                }
                 OutlinedButton(
                     onClick = { ServerService.send(ctx, ServerService.ACTION_STOP) },
                     enabled = game != RunState.STOPPED || db != RunState.STOPPED
-                ) { Text("Stop") }
+                ) {
+                    Icon(Icons.Default.Stop, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp)); Text("Stop")
+                }
                 OutlinedButton(
                     onClick = { ServerService.send(ctx, ServerService.ACTION_RESTART) },
                     enabled = game == RunState.RUNNING
-                ) { Text("Restart") }
+                ) {
+                    Icon(Icons.Default.RestartAlt, null, Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp)); Text("Restart")
+                }
             }
         }
 
-        Section("Server") {
+        ModernCard("Server", icon = Icons.Default.Dns) {
             val i = info
-            if (game != RunState.RUNNING) {
-                Text("Server tidak berjalan.")
-            } else if (i == null) {
-                Text("Menunggu respons query UDP...")
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (game != RunState.RUNNING) {
+                    Text("Server tidak berjalan.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else if (i == null) {
+                    Text("Menunggu respons query UDP...")
+                    Text(
+                        "Kalau terus kosong: pastikan query aktif di ${st.engine.configName}.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Text(i.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    Text("Pemain: ${i.players}/${i.maxPlayers}")
+                    Text("Mode: ${i.mode}   Bahasa: ${i.language}")
+                    if (i.password) Text("Server memakai password")
+                }
+                Spacer(Modifier.height(4.dp))
+                Text("Port UDP: ${Prefs.port}", style = MaterialTheme.typography.bodySmall)
+                val ips = localIps()
+                if (ips.isNotEmpty()) {
+                    Text("Alamat LAN: " + ips.joinToString { "$it:${Prefs.port}" }, style = MaterialTheme.typography.bodySmall)
+                }
                 Text(
-                    "Kalau terus kosong: pastikan query aktif di ${st.engine.configName}.",
-                    style = MaterialTheme.typography.bodySmall
+                    "Di HP yang sama: 127.0.0.1:${Prefs.port}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-            } else {
-                Text(i.name, style = MaterialTheme.typography.titleSmall)
-                Text("Pemain: ${i.players}/${i.maxPlayers}")
-                Text("Mode: ${i.mode}   Bahasa: ${i.language}")
-                if (i.password) Text("Server memakai password")
             }
-            Text("Port UDP: ${Prefs.port}")
-            val ips = localIps()
-            if (ips.isNotEmpty()) Text("Alamat LAN: " + ips.joinToString { "$it:${Prefs.port}" })
-            Text("Di HP yang sama: 127.0.0.1:${Prefs.port}", style = MaterialTheme.typography.bodySmall)
         }
 
-        Section("Performa") { PerfContent(perf, queryMs) }
+        ModernCard("Performa", icon = Icons.Default.Speed) {
+            PerfContent(perf, queryMs)
+        }
 
         if (game == RunState.RUNNING) {
-            Section("Pemain (${players.size})") {
-                if (players.isEmpty()) Text("Tidak ada pemain online.")
-                players.forEach { Text("${it.name}   skor ${it.score}   ping ${it.ping}") }
+            ModernCard("Pemain (${players.size})", icon = Icons.Default.People) {
+                if (players.isEmpty()) {
+                    Text("Tidak ada pemain online.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        players.forEach { Text("${it.name}   skor ${it.score}   ping ${it.ping}") }
+                    }
+                }
             }
         }
+
+        Spacer(Modifier.height(16.dp))
     }
 }
