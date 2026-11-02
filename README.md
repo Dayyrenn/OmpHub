@@ -6,7 +6,7 @@ Start/stop server, console (stdin & RCON), dashboard pemain (query UDP), file ma
 SQL console, serta backup/restore, semuanya dari satu aplikasi.
 
 ![Platform](https://img.shields.io/badge/platform-Android%208.0%2B%20(arm64)-3DDC84)
-![Version](https://img.shields.io/badge/version-1.1.0-blue)
+![Version](https://img.shields.io/badge/version-1.1.1-blue)
 
 Rootfs Debian dan MariaDB **sudah dibundel di dalam APK** dan dipasang otomatis saat app dibuka pertama kali, tanpa internet. Server game (open.mp / SA-MP) dipasang sendiri oleh user: unduh dari tab Setup, atau unggah arsipnya lewat tab Files. Riwayat perubahan ada di [`CHANGELOG.md`](CHANGELOG.md).
 
@@ -42,6 +42,8 @@ Rootfs Debian dan MariaDB **sudah dibundel di dalam APK** dan dipasang otomatis 
 - Info server real-time lewat query UDP: nama, jumlah pemain, mode, bahasa, status password.
 - Daftar pemain online beserta skor dan ping.
 - Alamat LAN dan alamat lokal (`127.0.0.1:<port>`) ditampilkan langsung.
+- Kartu **Performa**: CPU, RAM, thread, dan uptime per komponen (server game, MariaDB, panel), lengkap dengan grafik ~2 menit terakhir.
+- Info perangkat: RAM HP, baterai, suhu, status termal, trafik jaringan, ruang penyimpanan, dan waktu respons query server.
 
 **Console**
 - Dua mode input: **stdin** (langsung ke proses `omp-server`) dan **RCON** (lewat UDP).
@@ -212,7 +214,7 @@ Android app (Kotlin + Jetpack Compose)
 
 Poin penting:
 
-- Binary `proot`, `loader`, `talloc`, `libandroid-shmem`, dan `qemu-i386` dibundel di dalam APK dan dijalankan dari lokasi native library app (satu-satunya lokasi yang boleh di-exec di Android modern).
+- Binary `proot`, `loader`, `talloc`, `libandroid-shmem` (dari Termux) dan `qemu-i386` (dari `qemu-user-static` Ubuntu) dibundel di dalam APK dan dijalankan dari lokasi native library app (satu-satunya lokasi yang boleh di-exec di Android modern). `libatomic1` i386 juga diambil dari Ubuntu dan dibundel sebagai aset.
 - PRoot tidak punya network namespace, jadi `127.0.0.1` di dalam rootfs sama dengan localhost Android.
   Gamemode konek ke MariaDB lewat TCP `127.0.0.1`.
 - MariaDB jalan **native arm64**, sedangkan game jalan lewat **QEMU user-mode**. Keduanya dipisah supaya
@@ -267,7 +269,7 @@ Poin penting:
 ## Atribusi & lisensi komponen
 
 Aplikasi ini membawa dan/atau mengunduh komponen pihak ketiga (PRoot, talloc, QEMU, open.mp, server SA-MP, MariaDB,
-Debian, Alpine, dan lainnya) yang masing-masing memiliki lisensi sendiri. Daftar lengkapnya ada di
+Debian, Ubuntu, Alpine, dan lainnya) yang masing-masing memiliki lisensi sendiri. Daftar lengkapnya ada di
 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
 
 Proyek ini tidak berafiliasi dengan open.mp, Rockstar Games, atau Take-Two Interactive.
