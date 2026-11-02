@@ -60,9 +60,9 @@ object Prefs {
     const val DEF_OPENMP =
         "https://github.com/openmultiplayer/open.mp/releases/latest/download/open.mp-linux-x86.tar.gz"
     const val DEF_SAMP =
-        "https://gta-multiplayer.cz/downloads/samp037svr_R2-2-1.tar.gz"
+        "https://sa-mp.co.id/files/samp037svr_R2-2-1.tar.gz"
     const val DEF_SAMP_DL =
-        "https://archive.org/download/sa-mp-0.3.dl/samp03DLsvr_R1.tar.gz"
+        "https://sa-mp.co.id/files/samp03DLsvr_R1.tar.gz"
     const val DEF_ALPINE =
         "https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/aarch64/alpine-minirootfs-3.20.3-aarch64.tar.gz"
 
