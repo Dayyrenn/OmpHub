@@ -15,7 +15,7 @@ android {
         // untuk app yang targetSdk >= 29, dan PRoot butuh itu. Sama seperti Termux.
         targetSdk = 35
         versionCode = 1
-        versionName = "1.0.0"
+        versionName = "1.1.0"
         ndk { abiFilters += "arm64-v8a" }
     }
 
