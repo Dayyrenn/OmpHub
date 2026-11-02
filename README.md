@@ -8,7 +8,7 @@ SQL console, serta backup/restore, semuanya dari satu aplikasi.
 ![Platform](https://img.shields.io/badge/platform-Android%208.0%2B%20(arm64)-3DDC84)
 ![Version](https://img.shields.io/badge/version-1.1.0-blue)
 
-Rootfs Debian dan MariaDB **sudah dibundel di dalam APK** dan dipasang otomatis saat app dibuka pertama kali, tanpa internet. **Server game (open.mp / SA-MP) tidak dibundel dan tidak dipasang otomatis**: user mengunduhnya sendiri dari tab Setup, atau mengunggah arsipnya lewat tab Files. Riwayat perubahan ada di [`CHANGELOG.md`](CHANGELOG.md).
+Rootfs Debian dan MariaDB **sudah dibundel di dalam APK** dan dipasang otomatis saat app dibuka pertama kali, tanpa internet. Server game (open.mp / SA-MP) dipasang sendiri oleh user: unduh dari tab Setup, atau unggah arsipnya lewat tab Files. Riwayat perubahan ada di [`CHANGELOG.md`](CHANGELOG.md).
 
 ---
 
@@ -76,14 +76,14 @@ Rootfs Debian dan MariaDB **sudah dibundel di dalam APK** dan dipasang otomatis 
 | Root | Tidak perlu |
 | Ruang kosong | ±1 GB (APK + hasil ekstrak rootfs dan MariaDB, ditambah server game) |
 | Internet | Tidak perlu untuk rootfs dan MariaDB; perlu bila server game diunduh dari tab Setup (tidak perlu bila diunggah manual) |
-| Ukuran APK | Lebih kecil dari sebelumnya (rootfs dan MariaDB ikut di dalamnya, server game tidak) |
+| Ukuran APK | Rootfs game dan MariaDB ikut di dalamnya |
 | RAM | Disarankan 4 GB ke atas bila game dan DB jalan bersamaan |
 
 ---
 
 ## Instalasi
 
-1. Unduh APK terbaru dari tab **Releases** (rootfs dan MariaDB ikut di dalamnya, server game tidak).
+1. Unduh APK terbaru dari tab **Releases**.
 2. Izinkan pemasangan dari sumber tidak dikenal, lalu install.
 3. Buka app. **Pemasangan otomatis rootfs dan MariaDB berjalan sendiri** (±2-5 menit, tanpa internet) dan progresnya tampil di bagian atas layar. Jangan tutup app sampai selesai.
 4. Izinkan notifikasi saat diminta (dipakai untuk foreground service).
@@ -101,7 +101,7 @@ Rootfs Debian dan MariaDB **sudah dibundel di dalam APK** dan dipasang otomatis 
 
    Bila pemasangan otomatis gagal atau ingin mengulang, gunakan tombol **Pasang rootfs + MariaDB** atau tombol per langkah di tab Setup.
 
-   **Server game (open.mp atau SA-MP 0.3.7 / 0.3.DL) tidak ikut di APK dan tidak dipasang otomatis.** Pilih mesin di bagian **Mesin server**, lalu pasang dengan salah satu cara:
+   **Server game (open.mp atau SA-MP 0.3.7 / 0.3.DL) dipasang sendiri oleh user.** Pilih mesin di bagian **Mesin server**, lalu pasang dengan salah satu cara:
    - **Unduh dari Setup**: tekan tombol **Unduh** (URL bisa diatur di bagian URL unduhan). Perlu internet.
    - **Unggah manual**: di tab **Files**, upload arsip server (`.tar.gz` / `.zip`) lalu **Unzip**. Pastikan `omp-server` (open.mp) atau `samp03svr` (SA-MP) berada langsung di folder server, bukan di dalam subfolder. App akan mendeteksinya sebagai terpasang.
 3. Tekan **Tes game** dan **Tes DB**. Output `uname -a` berarti PRoot berfungsi.
@@ -158,11 +158,11 @@ Mesin server hanya bisa diganti saat server berhenti.
 | Komponen | Default |
 |---|---|
 | open.mp (Linux x86, `.tar.gz`) | rilis terbaru di `github.com/openmultiplayer/open.mp` |
-| SA-MP 0.3.7 server Linux (`.tar.gz`) | `samp037svr_R2-2-1.tar.gz` dari `sa-mp.co.id/files` (situs komunitas SAMP Indo) |
-| SA-MP 0.3.DL server Linux (`.tar.gz`) | `samp03DLsvr_R1.tar.gz` dari `sa-mp.co.id/files` (situs komunitas SAMP Indo) |
+| SA-MP 0.3.7 server Linux (`.tar.gz`) | `samp037svr_R2-2-1.tar.gz` dari `sa-mp.co.id/files` (situs komunitas SA-MP Indo) |
+| SA-MP 0.3.DL server Linux (`.tar.gz`) | `samp03DLsvr_R1.tar.gz` dari `sa-mp.co.id/files` (situs komunitas SA-MP Indo) |
 | Alpine aarch64 minirootfs (`.tar.gz`) | Alpine 3.20.3 |
 
-URL server game dipakai saat menekan tombol **Unduh** / **Update** di tab Setup. Tidak ada server game yang dibundel di APK.
+URL server game dipakai saat menekan tombol **Unduh** / **Update** di tab Setup.
 
 ---
 
@@ -249,7 +249,7 @@ Poin penting:
 
 ## Batasan & catatan penting
 
-1. **Ukuran APK**: rootfs dan MariaDB dibundel, server game tidak. Paket MariaDB mengikuti versi saat APK dibuild. Versi server game mengikuti arsip yang diunduh atau diunggah user.
+1. **Ukuran APK**: rootfs game dan MariaDB dibundel. Paket MariaDB mengikuti versi saat APK dibuild. Versi server game mengikuti arsip yang diunduh atau diunggah user.
 2. **Performa**: game berjalan lewat emulasi QEMU. Cocok untuk server kecil, development, dan testing,
    bukan untuk ratusan pemain.
 3. **Hanya arm64**: HP 32-bit atau x86 tidak didukung.
