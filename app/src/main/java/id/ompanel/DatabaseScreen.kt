@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FileDownload
@@ -31,6 +30,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import android.net.Uri
+import android.os.Parcel
+import android.os.Bundle
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -43,6 +45,35 @@ import kotlinx.coroutines.withContext
 import java.io.File
 
 private const val PHPMYADMIN_URL = "http://127.0.0.1:8080/phpmyadmin/"
+
+private const val PHPMYADMIN_STATE_FILE = "phpmyadmin_webview_state.bin"
+
+private fun readPhpMyAdminState(context: android.content.Context): Bundle? {
+    val file = File(context.filesDir, PHPMYADMIN_STATE_FILE)
+    if (!file.exists()) return null
+    return runCatching {
+        val parcel = Parcel.obtain()
+        try {
+            parcel.unmarshall(file.readBytes(), 0, file.length().toInt())
+            parcel.setDataPosition(0)
+            parcel.readBundle(WebView::class.java.classLoader)
+        } finally {
+            parcel.recycle()
+        }
+    }.getOrNull()
+}
+
+private fun writePhpMyAdminState(context: android.content.Context, state: Bundle) {
+    runCatching {
+        val parcel = Parcel.obtain()
+        try {
+            parcel.writeBundle(state)
+            File(context.filesDir, PHPMYADMIN_STATE_FILE).writeBytes(parcel.marshall())
+        } finally {
+            parcel.recycle()
+        }
+    }
+}
 
 @Composable
 fun DatabaseScreen() {
@@ -65,7 +96,7 @@ fun DatabaseScreen() {
                         check(MariaDb.isRunning()) { "MariaDB tidak sedang berjalan." }
                         val input = context.contentResolver.openInputStream(uri)
                             ?: error("File SQL tidak dapat dibaca.")
-                        val temp = File(Env.tmpDir, "omphub-import-\${System.currentTimeMillis()}.sql")
+                        val temp = File(Env.tmpDir, "omphub-import-${System.currentTimeMillis()}.sql")
                         try {
                             input.use { source -> temp.outputStream().use { target -> source.copyTo(target) } }
                             MariaDb.importFrom(temp)
@@ -78,9 +109,9 @@ fun DatabaseScreen() {
                 operation = ""
                 result.fold(
                     onSuccess = { r ->
-                        toast(context, if (r.ok) "Import SQL ke database samp berhasil." else "Import gagal: \${r.output.take(500)}")
+                        toast(context, if (r.ok) "Import SQL ke database samp berhasil." else "Import gagal: ${r.output.take(500)}")
                     },
-                    onFailure = { e -> toast(context, "Import gagal: \${e.message ?: "kesalahan tidak diketahui"}") }
+                    onFailure = { e -> toast(context, "Import gagal: ${e.message ?: "kesalahan tidak diketahui"}") }
                 )
             }
         }
@@ -96,11 +127,11 @@ fun DatabaseScreen() {
                 val result = withContext(Dispatchers.IO) {
                     runCatching {
                         check(MariaDb.isRunning()) { "MariaDB tidak sedang berjalan." }
-                        val temp = File(Env.tmpDir, "omphub-export-\${System.currentTimeMillis()}.sql")
+                        val temp = File(Env.tmpDir, "omphub-export-${System.currentTimeMillis()}.sql")
                         try {
                             val dump = MariaDb.dumpTo(temp)
                             check(dump.ok && temp.exists() && temp.length() > 0L) {
-                                "Export gagal: \${dump.output.take(500).ifBlank { "mariadb-dump tidak menghasilkan file." }}"
+                                "Export gagal: ${dump.output.take(500).ifBlank { "mariadb-dump tidak menghasilkan file." }}"
                             }
                             val output = context.contentResolver.openOutputStream(uri)
                                 ?: error("Lokasi tujuan tidak dapat ditulis.")
@@ -114,7 +145,7 @@ fun DatabaseScreen() {
                 operation = ""
                 result.fold(
                     onSuccess = { toast(context, "Export database samp berhasil.") },
-                    onFailure = { e -> toast(context, "Export gagal: \${e.message ?: "kesalahan tidak diketahui"}") }
+                    onFailure = { e -> toast(context, "Export gagal: ${e.message ?: "kesalahan tidak diketahui"}") }
                 )
             }
         }
@@ -207,7 +238,8 @@ fun DatabaseScreen() {
                         webChromeClient = WebChromeClient()
                         setBackgroundColor(android.graphics.Color.TRANSPARENT)
                         webView = this
-                        loadUrl(PHPMYADMIN_URL)
+                        val restored = readPhpMyAdminState(ctx)?.let { restoreState(it) }
+                        if (restored == null) loadUrl(PHPMYADMIN_URL)
                     }
                 },
                 update = { view ->
@@ -215,6 +247,11 @@ fun DatabaseScreen() {
                     if (view.url == null) view.loadUrl(PHPMYADMIN_URL)
                 },
                 onRelease = { view ->
+                    runCatching {
+                        val state = Bundle()
+                        view.saveState(state)
+                        writePhpMyAdminState(context, state)
+                    }
                     if (webView === view) webView = null
                     view.stopLoading()
                     view.destroy()
