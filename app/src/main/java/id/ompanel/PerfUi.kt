@@ -100,10 +100,6 @@ fun PerfContent(p: PerfSnapshot, queryMs: Long?) {
         LinearProgressIndicator(progress = { (used.toFloat() / p.memTotalKb).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
         if (p.lowMemory) Text("Memori HP hampir habis, Android bisa mematikan server.", color = MaterialTheme.colorScheme.error)
     }
-    if (p.batteryPct >= 0) {
-        Metric("Baterai", "${p.batteryPct}%" + (if (p.charging) " (mengisi)" else ""))
-        if (!p.batteryTempC.isNaN()) Metric("Suhu baterai", String.format(Locale.US, "%.1f°C", p.batteryTempC))
-    }
     p.thermal?.let { Metric("Status termal", it) }
     Metric("Jaringan ↓ / ↑", "${fmtRate(p.rxBps)} / ${fmtRate(p.txBps)}")
     if (p.diskTotalB > 0) Metric("Penyimpanan bebas", "${fmtBytes(p.diskFreeB)} / ${fmtBytes(p.diskTotalB)}")

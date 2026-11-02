@@ -111,7 +111,7 @@ object Prefs {
     var sampVersion: SampVersion
         get() = SampVersion.from(sp.getString("sampVersion", null))
         set(v) = sp.edit().putString("sampVersion", v.code).apply()
-    fun sampUrl(v: SampVersion) = if (v == SampVersion.DL) urlSampDl else urlSamp
+    fun sampUrl(v: SampVersion) = urlSamp
     var serverType: ServerType
         get() = ServerType.from(sp.getString("serverType", null))
         set(v) = sp.edit().putString("serverType", v.name).apply()

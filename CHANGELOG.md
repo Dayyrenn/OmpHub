@@ -40,3 +40,11 @@ Rilis awal: panel open.mp / SA-MP (0.3.7 dan 0.3.DL) + MariaDB di Android arm64 
 - Renamed the Setup navigation item to Mesin.
 - Simplified the Mesin screen to only select and download/update open.mp or SA-MP, choose SA-MP version, and view installation logs.
 - Kept base runtime preparation in the existing first-launch flow; removed unrelated database, rootfs, Android, backup, and advanced URL controls from the Mesin screen.
+
+
+## Revisi panel Setup
+- Nama navigasi tetap **Setup**; bagian di dalamnya diberi judul Setup Mesin Server.
+- URL unduhan hanya menampilkan open.mp dan satu URL SA-MP.
+- Mengembalikan pengelolaan backup: buat, restore, dan hapus backup.
+- Menghilangkan informasi baterai dari Dashboard dan bagian performa.
+- Menghilangkan pengaturan optimasi baterai dari halaman Setup.

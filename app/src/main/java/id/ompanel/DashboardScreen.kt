@@ -121,7 +121,7 @@ fun DashboardScreen() {
                     }
                 }
                 if (!st.ready) {
-                    Text("Mesin server belum siap. Buka tab Mesin untuk mengunduh open.mp atau SA-MP.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Mesin server belum siap. Buka tab Setup untuk mengunduh open.mp atau SA-MP.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }

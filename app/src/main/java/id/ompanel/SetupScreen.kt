@@ -13,6 +13,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -20,28 +23,40 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 
 @Composable
 fun SetupScreen() {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
     val st by Controller.setupStatus.collectAsStateWithLifecycle()
     val busy by Controller.setupBusy.collectAsStateWithLifecycle()
     val log by Controller.setupLog.lines.collectAsStateWithLifecycle()
     val game by Controller.gameState.collectAsStateWithLifecycle()
     var sampVer by remember { mutableStateOf(Prefs.sampVersion) }
+    var openMpUrl by remember { mutableStateOf(Prefs.urlOpenMp) }
+    var sampUrl by remember { mutableStateOf(Prefs.urlSamp) }
+    var backups by remember { mutableStateOf(Controller.listBackups()) }
+    var refreshTick by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(Unit) { Controller.refreshStatus() }
-    LaunchedEffect(busy) { Controller.refreshStatus() }
+    LaunchedEffect(busy, refreshTick) { Controller.refreshStatus(); backups = Controller.listBackups() }
 
     val isSamp = st.engine == ServerType.SAMP
     val serverName = if (isSamp) "SA-MP ${sampVer.label}" else "open.mp"
@@ -56,8 +71,8 @@ fun SetupScreen() {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Mesin server", style = MaterialTheme.typography.headlineMedium)
-            Text("Pilih platform game server yang ingin kamu jalankan.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Setup", style = MaterialTheme.typography.headlineMedium)
+            Text("Atur mesin server dan URL unduhan open.mp atau SA-MP.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
         Card(
@@ -65,7 +80,7 @@ fun SetupScreen() {
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text("PILIH MESIN", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                Text("SETUP MESIN SERVER", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                     ServerType.entries.forEach { type ->
                         val selected = st.engine == type
@@ -120,15 +135,84 @@ fun SetupScreen() {
                 if (busy) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.height(22.dp))
-                        Text("Sedang menyiapkan mesin server…", style = MaterialTheme.typography.bodySmall)
+                        Text("Sedang menyiapkan server…", style = MaterialTheme.typography.bodySmall)
                     }
                 }
                 if (game != RunState.STOPPED) {
-                    Text("Hentikan server sebelum mengganti atau memperbarui mesin.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    Text("Hentikan server sebelum mengganti atau memperbarui mesin server.", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
                 if (!st.binaries || !st.gameRootfs) {
                     Text("Runtime dan sistem dasar disiapkan otomatis saat pertama kali aplikasi dijalankan. Pastikan proses persiapan awal sudah selesai.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Backup", style = MaterialTheme.typography.titleMedium)
+                Text("Simpan salinan folder server dan database agar bisa dipulihkan kapan saja.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Button(
+                    onClick = {
+                        scope.launch(Dispatchers.IO) {
+                            runCatching { Controller.createBackup() }
+                                .onSuccess { toast(ctx, "Backup berhasil: ${it.name}") }
+                                .onFailure { toast(ctx, "Backup gagal: ${it.message}") }
+                            refreshTick++
+                        }
+                    },
+                    enabled = !busy
+                ) { Text("Buat backup sekarang") }
+                if (backups.isEmpty()) Text("Belum ada backup.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                backups.forEach { file ->
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(file.name, style = MaterialTheme.typography.bodyMedium)
+                            Text(humanSize(file.length()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch(Dispatchers.IO) {
+                                    runCatching { Controller.restoreBackup(file) }
+                                        .onSuccess { toast(ctx, it) }
+                                        .onFailure { toast(ctx, "Restore gagal: ${it.message}") }
+                                    refreshTick++
+                                }
+                            },
+                            enabled = game == RunState.STOPPED && !busy
+                        ) { Text("Restore") }
+                        IconButton(onClick = { file.delete(); refreshTick++ }) {
+                            Icon(Icons.Default.Delete, contentDescription = "Hapus backup")
+                        }
+                    }
+                }
+                Text("Lokasi: ${Env.backupDir.absolutePath}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("URL unduhan", style = MaterialTheme.typography.titleMedium)
+                Text("Masukkan direct URL arsip untuk mesin open.mp dan SA-MP saja.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                OutlinedTextField(
+                    value = openMpUrl,
+                    onValueChange = { openMpUrl = it; Prefs.urlOpenMp = it.trim() },
+                    label = { Text("open.mp Linux x86 (.tar.gz)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = sampUrl,
+                    onValueChange = { sampUrl = it; Prefs.urlSamp = it.trim() },
+                    label = { Text("SA-MP Linux (.tar.gz)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedButton(onClick = {
+                    openMpUrl = Prefs.DEF_OPENMP
+                    sampUrl = Prefs.DEF_SAMP
+                    Prefs.urlOpenMp = openMpUrl
+                    Prefs.urlSamp = sampUrl
+                }) { Text("Reset URL ke default") }
             }
         }
 

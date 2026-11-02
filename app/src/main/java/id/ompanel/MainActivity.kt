@@ -49,7 +49,7 @@ private val TABS: List<Pair<String, ImageVector>> = listOf(
     "Console" to Icons.Default.Terminal,
     "Files" to Icons.Default.Folder,
     "Database" to Icons.Default.Storage,
-    "Mesin" to Icons.Default.Settings
+    "Setup" to Icons.Default.Settings
 )
 
 private val OmpColors = darkColorScheme(
