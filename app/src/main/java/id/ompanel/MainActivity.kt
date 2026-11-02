@@ -3,7 +3,6 @@ package id.omphub
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,7 +23,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -33,6 +31,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
@@ -46,18 +45,30 @@ class MainActivity : ComponentActivity() {
 }
 
 private val TABS: List<Pair<String, ImageVector>> = listOf(
-    "Dashboard" to Icons.Default.Dashboard,
+    "Server" to Icons.Default.Dashboard,
     "Console" to Icons.Default.Terminal,
     "Files" to Icons.Default.Folder,
     "Database" to Icons.Default.Storage,
-    "Setup" to Icons.Default.Settings
+    "Mesin" to Icons.Default.Settings
+)
+
+private val OmpColors = darkColorScheme(
+    primary = Color(0xFF80B7FF),
+    onPrimary = Color(0xFF062F59),
+    secondary = Color(0xFF9CCBFF),
+    background = Color(0xFF0B1220),
+    surface = Color(0xFF111C2D),
+    surfaceVariant = Color(0xFF1B2A40),
+    onSurface = Color(0xFFE8F0FC),
+    onSurfaceVariant = Color(0xFFB1C1D6),
+    outline = Color(0xFF40536D)
 )
 
 @Composable
 fun OmpRoot() {
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { Controller.autoSetupOnFirstLaunch() } }
-    MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
-        Surface(Modifier.fillMaxSize()) {
+    MaterialTheme(colorScheme = OmpColors) {
+        Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
             val gate by Controller.bootGate.collectAsState()
             if (gate != BootGate.DONE) {
                 BootScreen()
@@ -65,27 +76,29 @@ fun OmpRoot() {
             }
             var tab by rememberSaveable { mutableIntStateOf(0) }
             Scaffold(
+                containerColor = MaterialTheme.colorScheme.background,
                 bottomBar = {
-                    NavigationBar {
-                        TABS.forEachIndexed { i, (label, icon) ->
+                    NavigationBar(containerColor = MaterialTheme.colorScheme.surface) {
+                        TABS.forEachIndexed { index, (label, icon) ->
                             NavigationBarItem(
-                                selected = tab == i,
-                                onClick = { tab = i },
+                                selected = tab == index,
+                                onClick = { tab = index },
                                 icon = { Icon(icon, contentDescription = label) },
                                 label = { Text(label) }
                             )
                         }
                     }
                 }
-            ) { pad ->
+            ) { padding ->
                 val setupBusy by Controller.setupBusy.collectAsState()
-                Column(Modifier.padding(pad).fillMaxSize()) {
+                Column(Modifier.padding(padding).fillMaxSize()) {
                     if (setupBusy) {
                         LinearProgressIndicator(Modifier.fillMaxWidth())
                         Text(
-                            "Menyiapkan komponen server… jangan tutup app. Detail ada di tab Setup.",
+                            "Menyiapkan komponen server…",
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.dp),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     Box(Modifier.weight(1f).fillMaxSize()) {

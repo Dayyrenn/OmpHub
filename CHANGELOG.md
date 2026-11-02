@@ -35,3 +35,8 @@ Semua komponen kini ada di dalam APK dan dipasang otomatis saat app dibuka perta
 ## [1.0.0]
 
 Rilis awal: panel open.mp / SA-MP (0.3.7 dan 0.3.DL) + MariaDB di Android arm64 tanpa root, dengan dashboard, console (stdin dan RCON), file manager, SQL console, serta backup dan restore. Rootfs, server game, dan MariaDB diunduh dari internet lewat tab Setup.
+## UI refresh
+- Redesigned the main dashboard with a dark server-control layout, clearer status, player/query metrics, server information, and performance sections.
+- Renamed the Setup navigation item to Mesin.
+- Simplified the Mesin screen to only select and download/update open.mp or SA-MP, choose SA-MP version, and view installation logs.
+- Kept base runtime preparation in the existing first-launch flow; removed unrelated database, rootfs, Android, backup, and advanced URL controls from the Mesin screen.
