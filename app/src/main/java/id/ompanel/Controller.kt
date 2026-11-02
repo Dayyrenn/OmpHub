@@ -20,6 +20,9 @@ import kotlin.concurrent.thread
 
 enum class RunState { STOPPED, STARTING, RUNNING, STOPPING }
 
+/** Gerbang layar awal: panel baru tampil setelah persiapan pertama selesai. */
+enum class BootGate { CHECKING, WORKING, FAILED, DONE }
+
 data class SetupStatus(
     val binaries: Boolean = false,
     val gameRootfs: Boolean = false,
@@ -47,6 +50,12 @@ object Controller {
     val dbState = MutableStateFlow(RunState.STOPPED)
     val setupBusy = MutableStateFlow(false)
     val setupStatus = MutableStateFlow(SetupStatus())
+
+    /** Status layar persiapan awal (sebelum panel dibuka). */
+    val bootGate = MutableStateFlow(BootGate.CHECKING)
+    /** Teks langkah yang sedang dikerjakan, tampil di layar persiapan. */
+    val bootStep = MutableStateFlow("Memeriksa komponen...")
+    val bootError = MutableStateFlow<String?>(null)
 
     @Volatile private var gameProc: Process? = null
     @Volatile private var runningType = ServerType.OMP
@@ -242,19 +251,22 @@ object Controller {
         stopDb()
     }
 
-    private fun runSetup(title: String, block: () -> Unit) {
+    private fun runSetup(title: String, onFinish: (Throwable?) -> Unit = {}, block: () -> Unit) {
         if (setupBusy.value) return
         setupBusy.value = true
         scope.launch {
             setupLog.add("( $title )")
+            var error: Throwable? = null
             try {
                 block()
                 setupLog.add("[Sukses] $title selesai")
             } catch (e: Throwable) {
+                error = e
                 setupLog.add("[ERROR] ${e.message ?: e}")
             } finally {
                 setupBusy.value = false
                 refreshStatus()
+                onFinish(error)
             }
         }
     }
@@ -328,13 +340,19 @@ object Controller {
      * Server game (open.mp / SA-MP) TIDAK ikut dipasang: user mengunduhnya lewat tombol di tab Setup
      * atau mengunggah sendiri lewat tab Files.
      */
-    fun installAll() = runSetup("Pasang semua komponen") {
+    fun installAll(onFinish: (Throwable?) -> Unit = {}) = runSetup("Pasang semua komponen", onFinish) {
         check(Env.binariesOk()) { "Binary proot/qemu belum ada di APK" }
         check(gameState.value == RunState.STOPPED && dbState.value == RunState.STOPPED) { "Hentikan server dulu" }
         refreshStatus()
-        if (!setupStatus.value.gameRootfs) doInstallGameRootfs()
+        if (!setupStatus.value.gameRootfs) {
+            bootStep.value = "Mengekstrak sistem dasar server (Debian i386)"
+            doInstallGameRootfs()
+        }
         refreshStatus()
-        if (Prefs.dbEnabled && !setupStatus.value.db) doInstallDb()
+        if (Prefs.dbEnabled && !setupStatus.value.db) {
+            bootStep.value = "Menyiapkan MariaDB"
+            doInstallDb()
+        }
         refreshStatus()
         if (!setupStatus.value.serverInstalled) {
             setupLog.add("Server ${setupStatus.value.engine.label} belum ada. Unduh lewat tombol di tab Setup, atau unggah manual lewat tab Files.")
@@ -344,16 +362,47 @@ object Controller {
     @Volatile private var autoSetupStarted = false
 
     /**
-     * Dipanggil saat app dibuka: pasang otomatis komponen yang belum ada.
+     * Dipanggil saat app dibuka. Bila ada komponen dasar yang belum ada, layar persiapan ditahan
+     * ([bootGate] = WORKING) sampai pemasangan selesai, baru panel dibuka. Bila semuanya sudah
+     * lengkap, gerbang langsung DONE. Kalau gagal, gerbang FAILED dan user bisa coba lagi atau
+     * tetap masuk ke panel.
      * Rootfs game dan MariaDB dipasang dari aset APK (offline). Server game tidak dipasang otomatis.
-     * Bila gagal, dicoba lagi saat app dibuka berikutnya, bukan sekali seumur hidup.
      */
     fun autoSetupOnFirstLaunch() {
+        if (autoSetupStarted) return
         refreshStatus()
         val st = setupStatus.value
-        if (autoSetupStarted || st.baseReady || !st.binaries) return
+        if (st.baseReady || !st.binaries) {
+            bootGate.value = BootGate.DONE
+            return
+        }
         autoSetupStarted = true
-        installAll()
+        runBootInstall()
+    }
+
+    /** Ulangi persiapan awal dari layar gagal. */
+    fun retryBootSetup() {
+        if (setupBusy.value) return
+        runBootInstall()
+    }
+
+    /** Lewati layar persiapan dan masuk ke panel apa adanya. */
+    fun skipBootSetup() {
+        bootGate.value = BootGate.DONE
+    }
+
+    private fun runBootInstall() {
+        bootError.value = null
+        bootStep.value = "Menyiapkan komponen server"
+        bootGate.value = BootGate.WORKING
+        installAll { err ->
+            if (err == null) {
+                bootGate.value = BootGate.DONE
+            } else {
+                bootError.value = err.message ?: err.toString()
+                bootGate.value = BootGate.FAILED
+            }
+        }
     }
 
     /** Uji cepat: jalankan `uname -a` di dalam rootfs. */

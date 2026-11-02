@@ -58,6 +58,11 @@ fun OmpRoot() {
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { Controller.autoSetupOnFirstLaunch() } }
     MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
         Surface(Modifier.fillMaxSize()) {
+            val gate by Controller.bootGate.collectAsState()
+            if (gate != BootGate.DONE) {
+                BootScreen()
+                return@Surface
+            }
             var tab by rememberSaveable { mutableIntStateOf(0) }
             Scaffold(
                 bottomBar = {

@@ -9,6 +9,7 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id-ID/1.0.0/).
 - Info perangkat: RAM HP, baterai, suhu, status termal, trafik jaringan, ruang penyimpanan, dan waktu respons query server.
 
 ### Diubah
+- Persiapan awal kini tampil sebagai layar loading penuh ("Menyiapkan OmpHub") dengan langkah yang sedang berjalan. Panel baru terbuka setelah rootfs dan MariaDB selesai dipasang; kalau gagal ada tombol "Coba lagi" dan "Buka panel".
 - `scripts/fetch-binaries.sh` kini mengambil `qemu-user-static` dan `libatomic1` dari Ubuntu, sebelumnya dari Debian.
 
 ## [1.1.0] - 2026-11-02
