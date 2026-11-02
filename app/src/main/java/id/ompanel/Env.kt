@@ -144,7 +144,10 @@ object Proot {
             "-w", workDir
         )
         if (target == Target.GAME) {
-            args += listOf("-q", Env.nativeLib("libqemu-i386.so").absolutePath + " -B 0x100000")
+            val extra = runCatching { File(Env.serverDir, "qemu-extra.txt").readText().trim() }.getOrDefault("")
+            val q = Env.nativeLib("libqemu-i386.so").absolutePath + " -B 0x100000" +
+                if (extra.isNotEmpty()) " $extra" else ""
+            args += listOf("-q", q)
         }
         args += listOf("-b", "/dev", "-b", "/proc")
         binds.forEach { (host, guest) -> args += listOf("-b", "$host:$guest") }
