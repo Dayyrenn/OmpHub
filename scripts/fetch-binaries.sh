@@ -48,7 +48,15 @@ S="$WORK/libandroid-shmem/data/data/com.termux/files/usr/lib"
 cp -L "$(ls "$S"/libandroid-shmem.so* | head -n1)" "$DEST/libandroid-shmem.so"
 
 echo ">> qemu-user-static (Debian arm64)"
-BASE="https://deb.debian.org/debian/pool/main/q/qemu"
+# QEMU_SOURCE=debian (default) atau ubuntu. Ubuntu arm64 ada di server "ports", paketnya pakai zstd.
+QEMU_SOURCE="${QEMU_SOURCE:-ubuntu}"
+case "$QEMU_SOURCE" in
+  ubuntu) BASE="https://ports.ubuntu.com/ubuntu-ports/pool/universe/q/qemu"
+          command -v zstd >/dev/null || { echo "Butuh 'zstd' untuk paket Ubuntu"; exit 1; } ;;
+  debian) BASE="https://deb.debian.org/debian/pool/main/q/qemu" ;;
+  *) echo "QEMU_SOURCE harus debian atau ubuntu"; exit 1 ;;
+esac
+echo "   sumber: $QEMU_SOURCE ($BASE)"
 ALL=$(curl -fsSL "$BASE/" | grep -o 'qemu-user-static_[^"]*_arm64\.deb' | sort -uV | tac)
 echo "   versi tersedia:"; echo "$ALL" | sed 's/^/     /'
 # Opsional: QEMU_VERSION=1:7.2 (awalan versi) untuk memilih versi qemu tertentu, mis. bila crashdetect crash.
