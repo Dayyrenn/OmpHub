@@ -79,6 +79,14 @@ fun deleteTree(root: File) {
             Files.deleteIfExists(file)
             return FileVisitResult.CONTINUE
         }
+        override fun visitFileFailed(file: Path, exc: IOException): FileVisitResult {
+            // Folder tanpa izin baca (mis. /host-rootfs buatan PRoot, mode 000):
+            // buka izinnya dulu, lalu hapus ulang. Kalau tetap tidak bisa dibuka, lempar error aslinya.
+            chmodSafe(file.toString(), 448)
+            try { Files.newDirectoryStream(file).close() } catch (_: IOException) { throw exc }
+            deleteTree(file.toFile())
+            return FileVisitResult.CONTINUE
+        }
         override fun postVisitDirectory(dir: Path, exc: IOException?): FileVisitResult {
             Files.deleteIfExists(dir)
             return FileVisitResult.CONTINUE
