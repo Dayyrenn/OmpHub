@@ -66,6 +66,20 @@ is_arm64_elf() {
   [ "$(od -An -tx1 -j18 -N1 "$1" | tr -d ' ')" = "b7" ]
 }
 
+# Selesaikan symlink DI DALAM folder ekstrak (symlink absolut seperti /usr/libexec/... dipetakan ke $WORK/qemu/...)
+resolve_in_root() {
+  local p="$1" root="$2" i=0 t
+  while [ -L "$p" ] && [ "$i" -lt 10 ]; do
+    t=$(readlink "$p")
+    case "$t" in
+      /*) p="$root$t" ;;
+      *)  p="$(dirname "$p")/$t" ;;
+    esac
+    i=$((i + 1))
+  done
+  echo "$p"
+}
+
 FOUND=""
 TRIES=0
 for DEB in $LIST; do
@@ -78,18 +92,21 @@ for DEB in $LIST; do
   ( cd "$WORK/qemu" && ar x ../qemu.deb && tar xf data.tar.* ) || continue
 
   while IFS= read -r Q; do
-    if [ -f "$Q" ] && is_arm64_elf "$Q"; then
-      FOUND="$Q"
+    R=$(resolve_in_root "$Q" "$WORK/qemu")
+    if [ -f "$R" ] && is_arm64_elf "$R"; then
+      FOUND="$R"
       break
     fi
   done < <(find "$WORK/qemu" \( -type f -o -type l \) \
-             \( -name 'i386-binfmt-P' -o -name 'qemu-i386-static' -o -name 'qemu-i386' \))
+             \( -name '*i386-binfmt-P' -o -name 'qemu-i386*' \))
 
   if [ -n "$FOUND" ]; then
     echo "   ditemukan: ${FOUND#$WORK/qemu}"
     break
   fi
-  echo "   tidak ada binary qemu-i386 asli di $DEB, coba versi sebelumnya"
+  echo "   tidak ada binary qemu-i386 asli di $DEB; isi paket terkait i386:"
+  find "$WORK/qemu" -name '*i386*' -exec ls -l {} \; | sed 's/^/     /'
+  echo "   coba versi sebelumnya"
 done
 
 [ -n "$FOUND" ] || { echo "Tidak ada paket qemu-user-static arm64 yang berisi binary qemu-i386 yang valid"; exit 1; }
