@@ -39,14 +39,18 @@ object Env {
 
     /** Salin aset APK ke [dest]. Mengembalikan false bila aset tidak dibundel. */
     fun copyAsset(name: String, dest: File): Boolean {
-        return try {
-            dest.parentFile?.mkdirs()
-            ctx.assets.open(name).use { input -> dest.outputStream().use { input.copyTo(it) } }
-            true
-        } catch (_: java.io.FileNotFoundException) {
-            dest.delete()
-            false
+        // Proses build Android bisa membuang akhiran .gz (rootfs-game.tar.gz -> rootfs-game.tar),
+        // jadi coba kedua nama.
+        val candidates = listOfNotNull(name, name.takeIf { it.endsWith(".gz") }?.removeSuffix(".gz"))
+        for (n in candidates) {
+            try {
+                dest.parentFile?.mkdirs()
+                ctx.assets.open(n).use { input -> dest.outputStream().use { input.copyTo(it) } }
+                return true
+            } catch (_: java.io.FileNotFoundException) { }
         }
+        dest.delete()
+        return false
     }
 
     fun binariesOk(): Boolean =

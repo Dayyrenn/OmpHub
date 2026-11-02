@@ -144,9 +144,12 @@ object Extractor {
         dest.mkdirs()
         val base = dest.toPath().normalize()
         BufferedInputStream(FileInputStream(archive), 1 shl 16).use { raw ->
+            raw.mark(8)
+            val b0 = raw.read(); val b1 = raw.read(); val b2 = raw.read()
+            raw.reset()
             val stream: InputStream = when {
-                archive.name.endsWith(".xz") -> XZCompressorInputStream(raw)
-                archive.name.endsWith(".gz") || archive.name.endsWith(".tgz") -> GzipCompressorInputStream(raw)
+                b0 == 0x1f && b1 == 0x8b -> GzipCompressorInputStream(raw)
+                b0 == 0xfd && b1 == 0x37 && b2 == 0x7a -> XZCompressorInputStream(raw)
                 else -> raw
             }
             TarArchiveInputStream(stream).use { tar ->
