@@ -14,14 +14,26 @@ android {
         // PENTING: targetSdk 28 disengaja. Android 10+ melarang exec dari folder data app
         // untuk app yang targetSdk >= 29, dan PRoot butuh itu. Sama seperti Termux.
         targetSdk = 35
-        versionCode = 1
+        versionCode = 2
         versionName = "1.1.0"
         ndk { abiFilters += "arm64-v8a" }
     }
 
+    signingConfigs {
+        create("release") {
+            val ks = System.getenv("KEYSTORE_FILE")
+            if (ks != null) {
+                storeFile = file(ks)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildFeatures { compose = true }
 
-    // Aset rootfs sudah berformat .xz, tidak perlu dikompres lagi oleh aapt.
+    // Aset rootfs sudah berformat .xz / .gz, tidak perlu dikompres lagi oleh aapt.
     androidResources { noCompress += listOf("xz", "gz") }
 
     packaging {
@@ -43,7 +55,10 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            // Di CI (ada KEYSTORE_FILE) pakai kunci tetap; build lokal tanpa keystore jatuh ke kunci debug.
+            signingConfig =
+                if (System.getenv("KEYSTORE_FILE") != null) signingConfigs.getByName("release")
+                else signingConfigs.getByName("debug")
         }
     }
 }

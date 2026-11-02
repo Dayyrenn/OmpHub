@@ -23,9 +23,16 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
-      - name: Build APK
-        run: gradle :app:assembleDebug --no-daemon
+      - name: Siapkan keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$RUNNER_TEMP/omphub.jks"
+      - name: Build APK release
+        env:
+          KEYSTORE_FILE: ${{ runner.temp }}/omphub.jks
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: gradle :app:assembleRelease --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: OmpHub-debug
-          path: app/build/outputs/apk/debug/*.apk
+          name: OmpHub-release
+          path: app/build/outputs/apk/release/*.apk
