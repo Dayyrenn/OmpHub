@@ -16,6 +16,7 @@ jobs:
       - name: Ambil binary proot/qemu + rootfs game
         env:
           QEMU_VERSION: "8.2.2"
+          QEMU_SOURCE: "ubuntu"
         run: bash scripts/fetch-binaries.sh
       - uses: docker/setup-qemu-action@v3
         with:

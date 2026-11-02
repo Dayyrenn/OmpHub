@@ -140,9 +140,9 @@ LAYER=$(echo "$MANIFEST" | jq -r '.layers[0].digest')
 dh "$REG/blobs/$LAYER" -o "$ASSETS/rootfs-game.tar.gz"
 tar -tzf "$ASSETS/rootfs-game.tar.gz" >/dev/null || { echo "rootfs-game.tar.gz rusak"; exit 1; }
 
-echo ">> libatomic1 i386 (bundel APK)"
-GCC_POOL="https://deb.debian.org/debian/pool/main/g/gcc-12"
-ATOMIC_DEB=$(curl -fsSL "$GCC_POOL/" | grep -o 'libatomic1_12[^"]*_i386\.deb' | sort -uV | tail -n1)
+echo ">> libatomic1 i386 (bundel APK, Ubuntu noble)"
+GCC_POOL="https://archive.ubuntu.com/ubuntu/pool/main/g/gcc-14"
+ATOMIC_DEB=$(curl -fsSL "$GCC_POOL/" | grep -o 'libatomic1_14[^"]*24\.04[^"]*_i386\.deb' | sort -uV | tail -n1)
 [ -n "$ATOMIC_DEB" ] || { echo "libatomic1 i386 tidak ditemukan di $GCC_POOL"; exit 1; }
 echo "   $ATOMIC_DEB"
 curl -fsSL "$GCC_POOL/$ATOMIC_DEB" -o "$WORK/libatomic1.deb"
