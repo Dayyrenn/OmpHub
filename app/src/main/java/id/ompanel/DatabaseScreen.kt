@@ -154,6 +154,10 @@ fun DatabaseScreen() {
     }
 
     val dbReady = setup.db && dbState == RunState.RUNNING
+    val credentials = remember(dbState) {
+        if (dbReady) MariaDb.loadCredentials() else null
+    }
+    var showPassword by remember { mutableStateOf(false) }
     var webView by remember { mutableStateOf<WebView?>(null) }
 
     Column(
@@ -183,6 +187,52 @@ fun DatabaseScreen() {
                 onClick = { webView?.reload() },
                 enabled = dbReady && !busy
             ) { Text("Refresh") }
+        }
+
+        if (credentials != null) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text("Informasi Koneksi Database", style = MaterialTheme.typography.titleMedium)
+                    DbInfoRow("Host", credentials.host)
+                    DbInfoRow("Port", credentials.port.toString())
+                    DbInfoRow("Nama Database", credentials.database)
+                    DbInfoRow("Username", credentials.user)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Password", style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(
+                                if (showPassword) credentials.password else "•".repeat(credentials.password.length.coerceAtLeast(8)),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                        OutlinedButton(onClick = { showPassword = !showPassword }) {
+                            Text(if (showPassword) "Sembunyikan" else "Tampilkan")
+                        }
+                    }
+                    Text(
+                        "Gunakan host dan port ini pada konfigurasi koneksi MySQL gamemode.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        } else if (dbReady) {
+            Text(
+                "Informasi koneksi belum tersedia. Coba matikan lalu nyalakan MariaDB.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error
+            )
         }
 
         Row(
