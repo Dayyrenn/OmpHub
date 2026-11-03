@@ -11,6 +11,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.filled.UnfoldMore
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.IconButton
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
@@ -167,11 +177,15 @@ fun DatabaseScreen() {
 
     val dbReady = setup.db && dbState == RunState.RUNNING
     var webView by remember { mutableStateOf<WebView?>(null) }
+    // Tinggi phpMyAdmin tetap (hampir satu layar penuh); halaman Database yang di-scroll,
+    // jadi kartu koneksi tidak ikut mengecil.
+    val webHeight = (LocalConfiguration.current.screenHeightDp * 0.9f).dp
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 6.dp, vertical = 4.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -225,73 +239,53 @@ fun DatabaseScreen() {
 
         if (!setup.db) {
             Text(
-                "MariaDB belum terpasang. Selesaikan instalasi melalui tab Setup terlebih dahulu.",
+                "MariaDB belum siap. Selesaikan persiapan awal aplikasi terlebih dahulu.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error
             )
         }
 
         credentials?.let { db ->
+            fun copy(label: String, value: String) {
+                clipboardManager.setText(AnnotatedString(value))
+                android.widget.Toast.makeText(context, "$label disalin.", android.widget.Toast.LENGTH_SHORT).show()
+            }
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 Column(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Koneksi Database", style = MaterialTheme.typography.labelLarge)
-                        Text("${db.host}:${db.port}", style = MaterialTheme.typography.labelMedium)
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Database", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(db.database, style = MaterialTheme.typography.bodySmall)
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Username", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(db.user, style = MaterialTheme.typography.bodySmall)
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Password", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        OutlinedButton(
-                            onClick = { showPassword = !showPassword },
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                        ) { Text(if (showPassword) "Sembunyikan" else "Tampilkan") }
-                    }
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            if (showPassword) db.password else "•".repeat(minOf(db.password.length, 20)),
-                            style = MaterialTheme.typography.bodySmall
-                        )
-                        OutlinedButton(
-                            onClick = {
-                                clipboardManager.setText(AnnotatedString(db.password))
-                                toast(context, "Password database disalin.")
-                            },
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)
-                        ) { Text("Salin Password") }
-                    }
+                    Text(
+                        "KONEKSI DATABASE",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+                    DbInfoRow("Hostname", "127.0.0.1") { copy("Hostname", "127.0.0.1") }
+                    DbInfoRow("User", db.user) { copy("User", db.user) }
+                    DbInfoRow(
+                        "Password",
+                        if (showPassword) db.password else "•".repeat(minOf(db.password.length, 12)),
+                        extra = {
+                            IconButton(onClick = { showPassword = !showPassword }, modifier = Modifier.size(32.dp)) {
+                                Icon(
+                                    if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                    contentDescription = if (showPassword) "Sembunyikan password" else "Tampilkan password",
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                    ) { copy("Password", db.password) }
+                    DbInfoRow("Database Name", db.database) { copy("Database name", db.database) }
+                    Text(
+                        "Isi hostname dengan 127.0.0.1, jangan localhost, di gamemode atau plugin MySQL.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
                 }
             }
         }
@@ -329,12 +323,12 @@ fun DatabaseScreen() {
 
         if (!dbReady) {
             Card(
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier.fillMaxWidth().height(webHeight),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(
-                        if (!setup.db) "MariaDB/phpMyAdmin belum terpasang. Pasang melalui tab Setup."
+                        if (!setup.db) "MariaDB/phpMyAdmin belum siap. Selesaikan persiapan awal aplikasi."
                         else if (dbState == RunState.STARTING) "MariaDB sedang dijalankan..."
                         else "Tekan Nyalakan MariaDB untuk membuka phpMyAdmin.",
                         modifier = Modifier.padding(20.dp),
@@ -342,9 +336,12 @@ fun DatabaseScreen() {
                     )
                 }
             }
-        } else {
+        } else Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
             AndroidView(
-                modifier = Modifier.fillMaxWidth().weight(1f),
+                modifier = Modifier.weight(1f).height(webHeight),
                 factory = { ctx ->
                     WebView(ctx).apply {
                         settings.javaScriptEnabled = true
@@ -353,6 +350,8 @@ fun DatabaseScreen() {
                         settings.loadsImagesAutomatically = true
                         settings.javaScriptCanOpenWindowsAutomatically = true
                         webViewClient = WebViewClient()
+                        // Biar geser di dalam phpMyAdmin tidak direbut scroll halaman.
+                        setOnTouchListener { v, _ -> v.parent?.requestDisallowInterceptTouchEvent(true); false }
                         webChromeClient = WebChromeClient()
                         setBackgroundColor(android.graphics.Color.TRANSPARENT)
                         webView = this
@@ -375,6 +374,52 @@ fun DatabaseScreen() {
                     view.destroy()
                 }
             )
+            // Jalur kosong: geser di sini untuk menggulung halaman (lihat koneksi database di atas).
+            Box(
+                modifier = Modifier
+                    .width(30.dp)
+                    .height(webHeight)
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Default.UnfoldMore,
+                    contentDescription = "Geser di sini untuk scroll halaman",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun DbInfoRow(
+    label: String,
+    value: String,
+    extra: @Composable (() -> Unit)? = null,
+    onCopy: () -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(96.dp)
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+            maxLines = 1,
+            modifier = Modifier.weight(1f)
+        )
+        extra?.invoke()
+        IconButton(onClick = onCopy, modifier = Modifier.size(32.dp)) {
+            Icon(Icons.Default.ContentCopy, contentDescription = "Salin $label", modifier = Modifier.size(18.dp))
         }
     }
 }

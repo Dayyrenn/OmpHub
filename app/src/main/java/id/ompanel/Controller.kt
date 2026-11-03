@@ -34,8 +34,6 @@ data class SetupStatus(
     /** Server terpilih ([engine]) sudah terpasang. */
     val serverInstalled get() = if (engine == ServerType.SAMP) samp else openMp
     val ready get() = binaries && gameRootfs && serverInstalled
-    /** Komponen yang dipasang otomatis (tanpa server game, karena server dipasang manual oleh user). */
-    val baseReady get() = binaries && gameRootfs
 }
 
 /** Pusat state aplikasi. Proses hidup di sini (bukan di UI) dan dijaga oleh ServerService. */
@@ -104,7 +102,7 @@ object Controller {
         }
         val type = st.engine
         if (!st.gameRootfs || !st.serverInstalled) {
-            gameLog.add("[panel] Rootfs/${type.label} belum terpasang. Buka tab Setup.")
+            gameLog.add(if (!st.gameRootfs) "[panel] Sistem dasar server belum siap. Selesaikan persiapan awal aplikasi." else "[panel] ${type.label} belum diunduh. Buka tab Setup.")
             return@withContext
         }
         gameState.value = RunState.STARTING
@@ -201,7 +199,7 @@ object Controller {
         if (dbState.value == RunState.RUNNING || dbState.value == RunState.STARTING) return@withContext
         refreshStatus()
         if (!setupStatus.value.db) {
-            dbLog.add("[panel] MariaDB belum terpasang. Buka tab Setup.")
+            dbLog.add("[panel] MariaDB belum siap. Selesaikan persiapan awal aplikasi.")
             return@withContext
         }
         dbState.value = RunState.STARTING
@@ -336,9 +334,7 @@ object Controller {
         MariaDb.install(Prefs.urlAlpine) { setupLog.add(it) }
     }
 
-    fun installGameRootfs() = runSetup("Pasang rootfs game (Debian i386)") { doInstallGameRootfs() }
     fun installServer() = runSetup("Pasang / update ${serverLabel()}") { doInstallServer() }
-    fun installDb() = runSetup("Pasang MariaDB") { doInstallDb() }
 
     /**
      * Pasang komponen dasar yang belum ada, berurutan: rootfs game lalu MariaDB (bila aktif).
@@ -379,8 +375,6 @@ object Controller {
         val st = setupStatus.value
         // Lewati setup hanya jika binary tersedia, rootfs game sudah ada,
         // dan MariaDB (bila diaktifkan) juga sudah terpasang lengkap.
-        // Sebelumnya baseReady hanya memeriksa rootfs game sehingga instalasi
-        // MariaDB terlewati pada perangkat yang rootfs game-nya sudah ada.
         if (!st.binaries || (st.gameRootfs && (!Prefs.dbEnabled || st.db))) {
             bootGate.value = BootGate.DONE
             return
@@ -412,17 +406,6 @@ object Controller {
                 bootGate.value = BootGate.FAILED
             }
         }
-    }
-
-    /** Uji cepat: jalankan `uname -a` di dalam rootfs. */
-    fun testProot(target: Proot.Target) = runSetup("Tes PRoot ($target)") {
-        check(Env.binariesOk()) { "Binary proot/qemu belum ada di APK" }
-        val rootfs = if (target == Proot.Target.GAME) Env.rootfsGame else Env.rootfsDb
-        check(rootfs.exists()) { "Rootfs belum dipasang" }
-        val r = Proot.build(target, listOf("/bin/uname", "-a")).runAndCapture(60)
-        setupLog.add("exit=${r.exit}")
-        setupLog.add(r.output.trim().ifEmpty { "(tanpa output)" })
-        check(r.ok) { "PRoot gagal, lihat output di atas" }
     }
 
     fun listBackups(): List<File> =

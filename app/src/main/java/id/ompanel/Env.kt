@@ -68,8 +68,6 @@ object Env {
 }
 
 object Prefs {
-    const val DEF_ROOTFS_GAME =
-        "https://raw.githubusercontent.com/debuerreotype/docker-debian-artifacts/dist-i386/bookworm/slim/rootfs.tar.xz"
     const val DEF_OPENMP =
         "https://github.com/openmultiplayer/open.mp/releases/latest/download/open.mp-linux-x86.tar.gz"
     const val DEF_SAMP =
@@ -83,9 +81,6 @@ object Prefs {
     private fun str(k: String, d: String) = sp.getString(k, d) ?: d
     private fun put(k: String, v: String) = sp.edit().putString(k, v).apply()
 
-    var urlGameRootfs: String
-        get() = str("urlGameRootfs", DEF_ROOTFS_GAME)
-        set(v) = put("urlGameRootfs", v)
     var urlOpenMp: String
         get() = str("urlOpenMp", DEF_OPENMP)
         set(v) = put("urlOpenMp", v)
@@ -111,8 +106,7 @@ object Prefs {
     var sampVersion: SampVersion
         get() = SampVersion.from(sp.getString("sampVersion", null))
         set(v) = sp.edit().putString("sampVersion", v.code).apply()
-    fun sampUrl(v: SampVersion) = urlSamp
-    fun sampDlUrl(v: SampVersion) = urlSampDl
+    fun sampUrl(v: SampVersion) = if (v == SampVersion.DL) urlSampDl else urlSamp
     var serverType: ServerType
         get() = ServerType.from(sp.getString("serverType", null))
         set(v) = sp.edit().putString("serverType", v.name).apply()

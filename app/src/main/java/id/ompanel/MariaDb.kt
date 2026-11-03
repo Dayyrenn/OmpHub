@@ -134,7 +134,7 @@ object MariaDb {
     @Synchronized
     fun start(onLine: (String) -> Unit, onExit: (Int) -> Unit) {
         if (proc?.isAlive == true) return
-        check(installed && initialized) { "MariaDB belum terpasang (tab Setup)" }
+        check(installed && initialized) { "MariaDB belum siap (persiapan awal belum selesai)" }
         val cmd = "mkdir -p /tmp /run/mysqld && " +
         "sed -i 's/^skip-networking/#skip-networking/' /etc/my.cnf.d/*.cnf 2>/dev/null; " +
         "exec mariadbd --user=root --datadir=/var/lib/mysql " +
