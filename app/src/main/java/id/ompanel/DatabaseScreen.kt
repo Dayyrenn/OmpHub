@@ -11,9 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
@@ -34,6 +31,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import android.net.Uri
 import android.os.Parcel
 import android.os.Bundle
@@ -80,41 +79,24 @@ private fun writePhpMyAdminState(context: android.content.Context, state: Bundle
 }
 
 @Composable
-private fun DbInfoRow(
-    label: String,
-    value: String
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            fontWeight = FontWeight.Medium
-        )
-    }
-}
-
-@Composable
 fun DatabaseScreen() {
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     val dbState by Controller.dbState.collectAsStateWithLifecycle()
     val setup by Controller.setupStatus.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
 
     var busy by remember { mutableStateOf(false) }
     var operation by remember { mutableStateOf("") }
+    var credentials by remember { mutableStateOf<DbCredentials?>(null) }
+    var showPassword by remember { mutableStateOf(false) }
+
+    LaunchedEffect(dbState, setup.db) {
+        credentials = withContext(Dispatchers.IO) { MariaDb.loadCredentials() }
+        if (dbState == RunState.RUNNING && credentials == null) {
+            credentials = withContext(Dispatchers.IO) { MariaDb.loadCredentials() }
+        }
+    }
 
     val importer = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
@@ -184,18 +166,14 @@ fun DatabaseScreen() {
     }
 
     val dbReady = setup.db && dbState == RunState.RUNNING
-    val credentials = remember(dbState) {
-        if (dbReady) MariaDb.loadCredentials() else null
-    }
-    var showPassword by remember { mutableStateOf(false) }
     var webView by remember { mutableStateOf<WebView?>(null) }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -219,52 +197,6 @@ fun DatabaseScreen() {
             ) { Text("Refresh") }
         }
 
-        if (credentials != null) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxWidth().padding(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text("Informasi Koneksi Database", style = MaterialTheme.typography.titleMedium)
-                    DbInfoRow("Host", credentials.host)
-                    DbInfoRow("Port", credentials.port.toString())
-                    DbInfoRow("Nama Database", credentials.database)
-                    DbInfoRow("Username", credentials.user)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Password", style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(
-                                if (showPassword) credentials.password else "•".repeat(credentials.password.length.coerceAtLeast(8)),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                        OutlinedButton(onClick = { showPassword = !showPassword }) {
-                            Text(if (showPassword) "Sembunyikan" else "Tampilkan")
-                        }
-                    }
-                    Text(
-                        "Gunakan host dan port ini pada konfigurasi koneksi MySQL gamemode.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        } else if (dbReady) {
-            Text(
-                "Informasi koneksi belum tersedia. Coba matikan lalu nyalakan MariaDB.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.error
-            )
-        }
-
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -274,7 +206,8 @@ fun DatabaseScreen() {
                     scope.launch { Controller.startDb() }
                 },
                 enabled = setup.db && dbState == RunState.STOPPED,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 6.dp)
             ) {
                 Text(if (dbState == RunState.STARTING) "Menyalakan..." else "Nyalakan MariaDB")
             }
@@ -283,7 +216,8 @@ fun DatabaseScreen() {
                     scope.launch { Controller.stopDb() }
                 },
                 enabled = dbState == RunState.RUNNING,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 6.dp)
             ) {
                 Text("Matikan MariaDB")
             }
@@ -297,6 +231,71 @@ fun DatabaseScreen() {
             )
         }
 
+        credentials?.let { db ->
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Koneksi Database", style = MaterialTheme.typography.labelLarge)
+                        Text("${db.host}:${db.port}", style = MaterialTheme.typography.labelMedium)
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Database", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(db.database, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Username", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(db.user, style = MaterialTheme.typography.bodySmall)
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Password", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        OutlinedButton(
+                            onClick = { showPassword = !showPassword },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        ) { Text(if (showPassword) "Sembunyikan" else "Tampilkan") }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            if (showPassword) db.password else "•".repeat(minOf(db.password.length, 20)),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        OutlinedButton(
+                            onClick = {
+                                clipboardManager.setText(AnnotatedString(db.password))
+                                toast(context, "Password database disalin.")
+                            },
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 0.dp)
+                        ) { Text("Salin Password") }
+                    }
+                }
+            }
+        }
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -304,7 +303,8 @@ fun DatabaseScreen() {
             OutlinedButton(
                 onClick = { importer.launch(arrayOf("application/sql", "application/x-sql", "text/plain", "*/*")) },
                 enabled = dbReady && !busy,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 6.dp)
             ) {
                 Icon(Icons.Default.FileUpload, contentDescription = null)
                 Text(" Import SQL")
@@ -312,7 +312,8 @@ fun DatabaseScreen() {
             OutlinedButton(
                 onClick = { exporter.launch("omphub-samp-backup.sql") },
                 enabled = dbReady && !busy,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 6.dp)
             ) {
                 Icon(Icons.Default.FileDownload, contentDescription = null)
                 Text(" Export SQL")

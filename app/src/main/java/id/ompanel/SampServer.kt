@@ -17,7 +17,7 @@ enum class ServerType(val label: String, val binary: String, val configName: Str
 
 /** Versi server SA-MP. Keduanya memakai binary `samp03svr`, hanya arsip unduhannya yang beda. */
 enum class SampVersion(val label: String, val code: String) {
-    V037("0.3.7 R2", "037"),
+    V037("0.3.7", "037"),
     DL("0.3.DL", "DL");
 
     companion object {
