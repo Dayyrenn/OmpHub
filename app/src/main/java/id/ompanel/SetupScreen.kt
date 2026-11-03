@@ -51,7 +51,7 @@ fun SetupScreen() {
     val game by Controller.gameState.collectAsStateWithLifecycle()
     var sampVer by remember { mutableStateOf(Prefs.sampVersion) }
     var openMpUrl by remember { mutableStateOf(Prefs.urlOpenMp) }
-    var sampUrl by remember { mutableStateOf(Prefs.urlSamp) }
+    var sampUrl by remember { mutableStateOf(Prefs.sampUrl(sampVer)) }
     var backups by remember { mutableStateOf(Controller.listBackups()) }
     var refreshTick by remember { mutableIntStateOf(0) }
 
@@ -100,9 +100,9 @@ fun SetupScreen() {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         SampVersion.entries.forEach { version ->
                             if (sampVer == version) {
-                                Button(onClick = { sampVer = version; Prefs.sampVersion = version }, enabled = game == RunState.STOPPED) { Text(version.label) }
+                                Button(onClick = { sampVer = version; Prefs.sampVersion = version; sampUrl = Prefs.sampUrl(version) }, enabled = game == RunState.STOPPED) { Text(version.label) }
                             } else {
-                                OutlinedButton(onClick = { sampVer = version; Prefs.sampVersion = version }, enabled = game == RunState.STOPPED) { Text(version.label) }
+                                OutlinedButton(onClick = { sampVer = version; Prefs.sampVersion = version; sampUrl = Prefs.sampUrl(version) }, enabled = game == RunState.STOPPED) { Text(version.label) }
                             }
                         }
                     }
@@ -192,7 +192,7 @@ fun SetupScreen() {
         Card(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text("URL unduhan", style = MaterialTheme.typography.titleMedium)
-                Text("Masukkan direct URL arsip untuk mesin open.mp dan SA-MP saja.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("Masukkan direct URL arsip untuk mesin open.mp dan versi SA-MP yang dipilih.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 OutlinedTextField(
                     value = openMpUrl,
                     onValueChange = { openMpUrl = it; Prefs.urlOpenMp = it.trim() },
@@ -202,16 +202,17 @@ fun SetupScreen() {
                 )
                 OutlinedTextField(
                     value = sampUrl,
-                    onValueChange = { sampUrl = it; Prefs.urlSamp = it.trim() },
-                    label = { Text("SA-MP Linux (.tar.gz)") },
+                    onValueChange = { sampUrl = it; Prefs.setSampUrl(sampVer, it.trim()) },
+                    label = { Text(if (sampVer == SampVersion.V037) "SA-MP 0.3.7 R2 Linux (.tar.gz)" else "SA-MP 0.3.DL Linux (.tar.gz)") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedButton(onClick = {
                     openMpUrl = Prefs.DEF_OPENMP
-                    sampUrl = Prefs.DEF_SAMP
                     Prefs.urlOpenMp = openMpUrl
-                    Prefs.urlSamp = sampUrl
+                    Prefs.urlSamp = Prefs.DEF_SAMP
+                    Prefs.urlSampDl = Prefs.DEF_SAMP_DL
+                    sampUrl = Prefs.sampUrl(sampVer)
                 }) { Text("Reset URL ke default") }
             }
         }

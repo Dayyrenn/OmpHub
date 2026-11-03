@@ -111,7 +111,17 @@ object Prefs {
     var sampVersion: SampVersion
         get() = SampVersion.from(sp.getString("sampVersion", null))
         set(v) = sp.edit().putString("sampVersion", v.code).apply()
-    fun sampUrl(v: SampVersion) = urlSamp
+    fun sampUrl(v: SampVersion): String = when (v) {
+        SampVersion.V037 -> urlSamp
+        SampVersion.DL -> urlSampDl
+    }
+
+    fun setSampUrl(v: SampVersion, url: String) {
+        when (v) {
+            SampVersion.V037 -> urlSamp = url
+            SampVersion.DL -> urlSampDl = url
+        }
+    }
     var serverType: ServerType
         get() = ServerType.from(sp.getString("serverType", null))
         set(v) = sp.edit().putString("serverType", v.name).apply()
@@ -179,6 +189,5 @@ object Proot {
         File(etc, "resolv.conf").apply { delete(); writeText("nameserver 1.1.1.1\nnameserver 8.8.8.8\n") }
         File(etc, "hosts").apply { delete(); writeText("127.0.0.1 localhost\n::1 localhost\n") }
         File(rootfs, "tmp").apply { mkdirs(); chmodSafe(path, 511 or 512) } // 1777
-        File(rootfs, "root").mkdirs()
     }
 }
