@@ -40,7 +40,6 @@ fun fmtUptime(ms: Long): String {
     else String.format(Locale.US, "%dm %02dd", m, d)
 }
 
-/** Grafik garis mini untuk riwayat ~2 menit terakhir (60 sampel x 2 detik). */
 @Composable
 fun Sparkline(values: List<Float>, modifier: Modifier = Modifier, minMax: Float = 1f) {
     val line = MaterialTheme.colorScheme.primary
@@ -83,7 +82,6 @@ private fun ProcBlock(title: String, u: ProcUsage, cores: Int, uptimeMs: Long?) 
     }
 }
 
-/** Isi kartu "Performa" di Dashboard. [queryMs] = waktu balas query UDP, null bila tidak ada. */
 @Composable
 fun PerfContent(p: PerfSnapshot, queryMs: Long?) {
     val gameLabel = Prefs.serverType.label

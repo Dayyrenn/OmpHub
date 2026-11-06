@@ -22,10 +22,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-/**
- * Layar penuh yang tampil saat app pertama dibuka dan komponen dasar belum lengkap.
- * Panel (tab Dashboard dkk) baru dibuka setelah [Controller.bootGate] = DONE.
- */
 @Composable
 fun BootScreen() {
     val gate by Controller.bootGate.collectAsStateWithLifecycle()

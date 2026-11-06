@@ -27,7 +27,6 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 
-/** Buffer log bergulir yang bisa di-observe dari Compose. */
 class LogBuffer(private val max: Int = 800) {
     private val _lines = MutableStateFlow<List<String>>(emptyList())
     val lines: StateFlow<List<String>> = _lines
@@ -39,7 +38,6 @@ data class CmdResult(val exit: Int, val output: String) {
     val ok get() = exit == 0
 }
 
-/** Blocking. Panggil dari thread background. */
 fun ProcessBuilder.runAndCapture(timeoutSec: Long = 120): CmdResult {
     redirectErrorStream(true)
     val p = start()
@@ -53,7 +51,6 @@ fun ProcessBuilder.runAndCapture(timeoutSec: Long = 120): CmdResult {
 
 private const val TOKEN_CHARS = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
-/** Alfanumerik saja, aman dipakai di SQL, JSON, dan shell tanpa escaping. */
 fun randomToken(len: Int = 20): String {
     val r = SecureRandom()
     return buildString { repeat(len) { append(TOKEN_CHARS[r.nextInt(TOKEN_CHARS.length)]) } }
@@ -63,10 +60,6 @@ fun chmodSafe(path: String, mode: Int) {
     try { Os.chmod(path, mode) } catch (_: Exception) { }
 }
 
-/**
- * Hapus pohon direktori TANPA mengikuti symlink.
- * (File.deleteRecursively mengikuti symlink dan berbahaya untuk rootfs yang punya symlink absolut.)
- */
 fun deleteTree(root: File) {
     val p = root.toPath()
     if (!Files.exists(p, java.nio.file.LinkOption.NOFOLLOW_LINKS)) return
@@ -126,7 +119,6 @@ fun downloadFile(url: String, dest: File, onProgress: (done: Long, total: Long) 
     }
 }
 
-/** Nama file arsip lokal dari URL, supaya Extractor tahu jenis kompresinya. */
 fun archiveNameFor(base: String, url: String): String = when {
     url.endsWith(".xz") -> "$base.tar.xz"
     url.endsWith(".gz") || url.endsWith(".tgz") -> "$base.tar.gz"
@@ -144,10 +136,6 @@ object Extractor {
         return n.takeIf { it.isNotEmpty() && it != "." }
     }
 
-    /**
-    * Ekstrak tar / tar.gz / tar.xz dengan symlink dan permission yang benar (penting untuk rootfs).
-    * Device node di folder /dev dilewati; PRoot menyediakan /dev sendiri lewat bind.
-    */
     fun extractTar(archive: File, dest: File, strip: Int = 0, onProgress: (Int) -> Unit = {}) {
         dest.mkdirs()
         val base = dest.toPath().normalize()
@@ -226,7 +214,6 @@ object Zips {
         z.closeEntry()
     }
 
-    /** [resolve] memetakan nama entry -> file tujuan, atau null untuk dilewati. */
     fun unzip(zip: File, resolve: (String) -> File?) {
         ZipInputStream(BufferedInputStream(FileInputStream(zip))).use { zi ->
             while (true) {

@@ -17,9 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import java.io.File
 
-/** Pemakaian resource satu grup proses (mis. proot + qemu + server game). */
 data class ProcUsage(
-    /** Persen dari SATU core; 100 = 1 core penuh, bisa lebih dari 100 di HP multi-core. */
     val cpuPct: Float = 0f,
     val rssKb: Long = 0,
     val threads: Int = 0,
@@ -48,7 +46,6 @@ data class PerfSnapshot(
     val diskTotalB: Long = 0
 )
 
-/** Ambil PID dari [Process] lewat reflection (method pid() di API 33+, field pid di versi lama). */
 fun pidOf(p: Process?): Int? {
     if (p == null) return null
     runCatching {
@@ -62,11 +59,6 @@ fun pidOf(p: Process?): Int? {
     }.getOrNull()
 }
 
-/**
- * Sampler performa. Android 8+ memblokir /proc/stat untuk app biasa, jadi CPU dihitung dari
- * /proc/<pid>/stat proses milik app sendiri (proot, qemu, server game, MariaDB semuanya
- * berjalan dengan UID app, jadi bisa dibaca). Hasilnya persen dari satu core, seperti `top`.
- */
 object PerfMonitor {
     private const val HIST = 60
     private const val ACTIVE_MS = 2000L

@@ -7,10 +7,6 @@ import java.net.InetAddress
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-/**
- * Klien query dan RCON UDP (protokol kompatibel SA-MP, dipakai juga oleh open.mp).
- * Mengakses server lokal di 127.0.0.1.
- */
 object Samp {
     data class Info(val password: Boolean, val players: Int, val maxPlayers: Int, val name: String, val mode: String, val language: String)
     data class Player(val name: String, val score: Int, val ping: Int)
@@ -75,7 +71,6 @@ object Samp {
         } catch (_: Exception) { emptyList() }
     }
 
-    /** Kirim perintah RCON; kembalikan baris-baris balasan (bisa kosong bila password salah / RCON mati). */
     fun rcon(port: Int, password: String, cmd: String): List<String> {
         val pw = password.toByteArray()
         val c = cmd.toByteArray()

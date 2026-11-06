@@ -20,7 +20,6 @@ import kotlin.concurrent.thread
 
 enum class RunState { STOPPED, STARTING, RUNNING, STOPPING }
 
-/** Gerbang layar awal: panel baru tampil setelah persiapan pertama selesai. */
 enum class BootGate { CHECKING, WORKING, FAILED, DONE }
 
 data class SetupStatus(
@@ -31,12 +30,10 @@ data class SetupStatus(
     val db: Boolean = false,
     val engine: ServerType = ServerType.OMP
 ) {
-    /** Server terpilih ([engine]) sudah terpasang. */
     val serverInstalled get() = if (engine == ServerType.SAMP) samp else openMp
     val ready get() = binaries && gameRootfs && serverInstalled
 }
 
-/** Pusat state aplikasi. Proses hidup di sini (bukan di UI) dan dijaga oleh ServerService. */
 object Controller {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -49,9 +46,7 @@ object Controller {
     val setupBusy = MutableStateFlow(false)
     val setupStatus = MutableStateFlow(SetupStatus())
 
-    /** Status layar persiapan awal (sebelum panel dibuka). */
     val bootGate = MutableStateFlow(BootGate.CHECKING)
-    /** Teks langkah yang sedang dikerjakan, tampil di layar persiapan. */
     val bootStep = MutableStateFlow("Memeriksa komponen...")
     val bootError = MutableStateFlow<String?>(null)
 
@@ -59,7 +54,6 @@ object Controller {
     @Volatile private var runningType = ServerType.OMP
     @Volatile private var gameStdin: BufferedWriter? = null
 
-    /** Waktu (SystemClock.elapsedRealtime) server game / MariaDB mulai berjalan, untuk uptime. */
     @Volatile var gameStartedAt = 0L
     @Volatile var dbStartedAt = 0L
 
@@ -80,7 +74,6 @@ object Controller {
 
     fun gameDepsOk() = File(Env.rootfsGame, ATOMIC_LIB).exists()
 
-    /** Pasang library tambahan yang dibutuhkan omp-server di rootfs Debian slim. */
     fun ensureGameDeps(log: (String) -> Unit) {
         if (gameDepsOk()) return
         log("Memasang library tambahan di rootfs (libatomic1), butuh beberapa menit...")
@@ -128,7 +121,7 @@ object Controller {
                 try {
                     p.inputStream.bufferedReader().forEachLine { gameLog.add(it) }
                 } catch (_: java.io.IOException) {
-                    // stream ditutup saat proses di-destroy, abaikan
+                    // stream ditutup pas proses di-destroy, abaikan
                 }
                 val code = runCatching { p.waitFor() }.getOrDefault(-1)
                 gameLog.add("[panel] ${type.binary} berhenti (exit $code)")
@@ -175,7 +168,6 @@ object Controller {
         return Samp.rcon(Prefs.port, pass, cmd)
     }
 
-    /** Sinkronkan port, query, dan password RCON di file config mesin [type]. */
     private fun syncServerConfig(type: ServerType) {
         when (type) {
             ServerType.OMP -> {
@@ -336,11 +328,6 @@ object Controller {
 
     fun installServer() = runSetup("Pasang / update ${serverLabel()}") { doInstallServer() }
 
-    /**
-     * Pasang komponen dasar yang belum ada, berurutan: rootfs game lalu MariaDB (bila aktif).
-     * Server game (open.mp / SA-MP) TIDAK ikut dipasang: user mengunduhnya lewat tombol di tab Setup
-     * atau mengunggah sendiri lewat tab Files.
-     */
     fun installAll(onFinish: (Throwable?) -> Unit = {}) = runSetup("Pasang semua komponen", onFinish) {
         check(Env.binariesOk()) { "Binary proot/qemu belum ada di APK" }
         check(gameState.value == RunState.STOPPED && dbState.value == RunState.STOPPED) { "Hentikan server dulu" }
@@ -362,19 +349,10 @@ object Controller {
 
     @Volatile private var autoSetupStarted = false
 
-    /**
-     * Dipanggil saat app dibuka. Bila ada komponen dasar yang belum ada, layar persiapan ditahan
-     * ([bootGate] = WORKING) sampai pemasangan selesai, baru panel dibuka. Bila semuanya sudah
-     * lengkap, gerbang langsung DONE. Kalau gagal, gerbang FAILED dan user bisa coba lagi atau
-     * tetap masuk ke panel.
-     * Rootfs game dan MariaDB dipasang dari aset APK (offline). Server game tidak dipasang otomatis.
-     */
     fun autoSetupOnFirstLaunch() {
         if (autoSetupStarted) return
         refreshStatus()
         val st = setupStatus.value
-        // Lewati setup hanya jika binary tersedia, rootfs game sudah ada,
-        // dan MariaDB (bila diaktifkan) juga sudah terpasang lengkap.
         if (!st.binaries || (st.gameRootfs && (!Prefs.dbEnabled || st.db))) {
             bootGate.value = BootGate.DONE
             return
@@ -383,13 +361,11 @@ object Controller {
         runBootInstall()
     }
 
-    /** Ulangi persiapan awal dari layar gagal. */
     fun retryBootSetup() {
         if (setupBusy.value) return
         runBootInstall()
     }
-
-    /** Lewati layar persiapan dan masuk ke panel apa adanya. */
+    
     fun skipBootSetup() {
         bootGate.value = BootGate.DONE
     }

@@ -6,11 +6,6 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 
-/**
- * Mengunduh layer rootfs dari Docker Hub tanpa Docker.
- * Contoh: DockerHub.downloadRootfs("i386/debian", "bookworm-slim", File(cache, "rootfs.tar.gz"))
- * Hasilnya tar.gz, jadi langsung bisa dipakai Extractor.extractTar (nama file harus berakhiran .tar.gz).
- */
 object DockerHub {
     private const val ACCEPT =
         "application/vnd.oci.image.index.v1+json, " +
@@ -34,7 +29,6 @@ object DockerHub {
         }
     }
 
-    /** Blocking. Panggil dari thread background. */
     fun downloadRootfs(
         repo: String,
         tag: String,

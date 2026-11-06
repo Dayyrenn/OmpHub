@@ -12,7 +12,6 @@ class OmpApplication : Application() {
     }
 }
 
-/** Path dan lokasi binary. Semua data ada di filesDir app. */
 object Env {
     lateinit var ctx: Context
         private set
@@ -37,7 +36,6 @@ object Env {
 
     fun nativeLib(name: String) = File(nativeDir, name)
 
-    /** Salin aset APK ke [dest]. Mengembalikan false bila aset tidak dibundel. */
     fun copyAsset(name: String, dest: File): Boolean {
         val candidates = listOfNotNull(name, name.takeIf { it.endsWith(".gz") }?.removeSuffix(".gz"))
         for (n in candidates) {
@@ -112,15 +110,6 @@ object Prefs {
         set(v) = sp.edit().putString("serverType", v.name).apply()
 }
 
-/**
- * Pembungkus PRoot.
- *
- * GAME : rootfs Debian i386, dijalankan lewat qemu-i386 (-q).
- * DB   : rootfs Alpine arm64, native (tanpa qemu).
- *
- * LD_LIBRARY_PATH / PROOT_* hanya untuk proot itu sendiri; di-unset lagi untuk proses di dalam rootfs
- * memakai `env -u`, supaya tidak mengganggu library guest.
- */
 object Proot {
     enum class Target { GAME, DB }
 
@@ -168,12 +157,11 @@ object Proot {
         }
     }
 
-    /** Tulis resolv.conf dan hosts di rootfs (rootfs docker tidak membawanya). */
     fun writeNetConfig(rootfs: File) {
         val etc = File(rootfs, "etc").apply { mkdirs() }
         File(etc, "resolv.conf").apply { delete(); writeText("nameserver 1.1.1.1\nnameserver 8.8.8.8\n") }
         File(etc, "hosts").apply { delete(); writeText("127.0.0.1 localhost\n::1 localhost\n") }
-        File(rootfs, "tmp").apply { mkdirs(); chmodSafe(path, 511 or 512) } // 1777
+        File(rootfs, "tmp").apply { mkdirs(); chmodSafe(path, 511 or 512) }
         File(rootfs, "root").mkdirs()
     }
 }

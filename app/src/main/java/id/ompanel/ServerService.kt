@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicInteger
 
-/** Foreground service: menjaga proses open.mp & MariaDB tetap hidup saat app di background. */
 class ServerService : Service() {
     companion object {
         const val ACTION_START = "id.omphub.START"

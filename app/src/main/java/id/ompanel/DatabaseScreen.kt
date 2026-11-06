@@ -177,8 +177,6 @@ fun DatabaseScreen() {
 
     val dbReady = setup.db && dbState == RunState.RUNNING
     var webView by remember { mutableStateOf<WebView?>(null) }
-    // Tinggi phpMyAdmin tetap (hampir satu layar penuh); halaman Database yang di-scroll,
-    // jadi kartu koneksi tidak ikut mengecil.
     val webHeight = (LocalConfiguration.current.screenHeightDp * 0.9f).dp
 
     Column(
@@ -350,7 +348,6 @@ fun DatabaseScreen() {
                         settings.loadsImagesAutomatically = true
                         settings.javaScriptCanOpenWindowsAutomatically = true
                         webViewClient = WebViewClient()
-                        // Biar geser di dalam phpMyAdmin tidak direbut scroll halaman.
                         setOnTouchListener { v, _ -> v.parent?.requestDisallowInterceptTouchEvent(true); false }
                         webChromeClient = WebChromeClient()
                         setBackgroundColor(android.graphics.Color.TRANSPARENT)
@@ -374,7 +371,6 @@ fun DatabaseScreen() {
                     view.destroy()
                 }
             )
-            // Jalur kosong: geser di sini untuk menggulung halaman (lihat koneksi database di atas).
             Box(
                 modifier = Modifier
                     .width(30.dp)

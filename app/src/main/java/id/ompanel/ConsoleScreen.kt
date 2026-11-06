@@ -35,7 +35,7 @@ fun ConsoleScreen() {
     val st by Controller.setupStatus.collectAsStateWithLifecycle()
     val scope = rememberCoroutineScope()
     var input by remember { mutableStateOf("") }
-    var mode by remember { mutableIntStateOf(0) } // 0 = stdin, 1 = RCON
+    var mode by remember { mutableIntStateOf(0) } // 0 buat stdin, 1 buat RCON
 
     fun send() {
         val cmd = input.trim()

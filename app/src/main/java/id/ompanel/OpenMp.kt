@@ -5,11 +5,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
-/**
- * Baca/tulis config.json open.mp. Hanya key yang disentuh yang diubah, sisanya dibiarkan.
- * Nama key mengikuti docs open.mp (name, max_players, network.port, rcon.*, pawn.*).
- * Verifikasi ke versi yang dipakai: lihat config.json yang di-generate omp-server.
- */
 class OpenMpConfig(private val file: File) : ServerConfig {
     private var root = JSONObject()
 

@@ -48,7 +48,7 @@ S="$WORK/libandroid-shmem/data/data/com.termux/files/usr/lib"
 cp -L "$(ls "$S"/libandroid-shmem.so* | head -n1)" "$DEST/libandroid-shmem.so"
 
 echo ">> qemu-user-static (Debian arm64)"
-# QEMU_SOURCE=debian (default) atau ubuntu. Ubuntu arm64 ada di server "ports", paketnya pakai zstd.
+
 QEMU_SOURCE="${QEMU_SOURCE:-ubuntu}"
 case "$QEMU_SOURCE" in
   ubuntu) BASE="https://ports.ubuntu.com/ubuntu-ports/pool/universe/q/qemu"
@@ -59,8 +59,7 @@ esac
 echo "   sumber: $QEMU_SOURCE ($BASE)"
 ALL=$(curl -fsSL "$BASE/" | grep -o 'qemu-user-static_[^"]*_arm64\.deb' | sort -uV | tac)
 echo "   versi tersedia:"; echo "$ALL" | sed 's/^/     /'
-# Opsional: QEMU_VERSION=1:7.2 (awalan versi) untuk memilih versi qemu tertentu, mis. bila crashdetect crash.
-# Contoh: QEMU_VERSION=1%3a7.2 bash scripts/fetch-binaries.sh   (":" di nama file Debian jadi "%3a")
+
 if [ -n "${QEMU_VERSION:-}" ]; then
   LIST=$(echo "$ALL" | grep -F "qemu-user-static_${QEMU_VERSION}" || true)
   [ -n "$LIST" ] || { echo "Tidak ada qemu-user-static dengan awalan '$QEMU_VERSION'"; exit 1; }
@@ -74,7 +73,6 @@ is_arm64_elf() {
   [ "$(od -An -tx1 -j18 -N1 "$1" | tr -d ' ')" = "b7" ]
 }
 
-# Selesaikan symlink DI DALAM folder ekstrak (symlink absolut seperti /usr/libexec/... dipetakan ke $WORK/qemu/...)
 resolve_in_root() {
   local p="$1" root="$2" i=0 t
   while [ -L "$p" ] && [ "$i" -lt 10 ]; do

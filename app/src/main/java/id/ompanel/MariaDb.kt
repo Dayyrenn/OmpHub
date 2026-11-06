@@ -15,11 +15,6 @@ data class DbCredentials(
     val database: String
 )
 
-/**
- * MariaDB native arm64 di rootfs Alpine terpisah (tanpa qemu). Listen hanya di 127.0.0.1.
- * Datadir di Env.dbData (di-bind ke /var/lib/mysql) jadi tetap ada bila rootfs dipasang ulang.
- * Semua fungsi blocking.
- */
 object MariaDb {
     private const val SOCK = "/run/mysqld/mysqld.sock"
     private val binds get() = listOf(Env.dbData.absolutePath to "/var/lib/mysql")
