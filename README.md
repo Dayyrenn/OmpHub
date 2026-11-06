@@ -9,8 +9,6 @@ Kelola server game, database, file, console, dan performa perangkat melalui satu
 
 Rootfs game dan MariaDB dibundel di dalam APK dan dipasang otomatis saat aplikasi pertama kali dibuka. Server game open.mp atau SA-MP dipasang sendiri oleh pengguna melalui tab Setup atau dengan mengunggah arsip server.
 
-Riwayat perubahan tersedia di [CHANGELOG.md](CHANGELOG.md).
-
 ---
 
 ## Daftar Isi
