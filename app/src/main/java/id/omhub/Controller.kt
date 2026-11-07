@@ -6,6 +6,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.BufferedOutputStream
 import java.io.BufferedWriter
@@ -50,6 +52,8 @@ object Controller {
     val bootStep = MutableStateFlow("Memeriksa komponen...")
     val bootError = MutableStateFlow<String?>(null)
 
+    private val gameLock = Mutex()
+
     @Volatile private var gameProc: Process? = null
     @Volatile private var runningType = ServerType.OMP
     @Volatile private var gameStdin: BufferedWriter? = null
@@ -85,18 +89,18 @@ object Controller {
         check(r.ok && gameDepsOk()) { "Gagal memasang libatomic1 (exit ${r.exit})" }
     }
 
-    suspend fun startGame(): Unit = withContext(Dispatchers.IO) {
-        if (gameProc?.isAlive == true) return@withContext
+    suspend fun startGame(): Unit = withContext(Dispatchers.IO) { gameLock.withLock {
+        if (gameProc?.isAlive == true) return@withLock
         refreshStatus()
         val st = setupStatus.value
         if (!st.binaries) {
             gameLog.add("[panel] Binary proot/qemu tidak ada di APK. Jalankan scripts/fetch-binaries.sh lalu build ulang.")
-            return@withContext
+            return@withLock
         }
         val type = st.engine
         if (!st.gameRootfs || !st.serverInstalled) {
             gameLog.add(if (!st.gameRootfs) "[panel] Sistem dasar server belum siap. Selesaikan persiapan awal aplikasi." else "[panel] ${type.label} belum diunduh. Buka tab Setup.")
-            return@withContext
+            return@withLock
         }
         gameState.value = RunState.STARTING
         try {
@@ -118,32 +122,60 @@ object Controller {
             gameStartedAt = SystemClock.elapsedRealtime()
             gameState.value = RunState.RUNNING
             thread(name = "omp-log", isDaemon = true) {
-                try {
-                    p.inputStream.bufferedReader().forEachLine { gameLog.add(it) }
-                } catch (_: java.io.IOException) {
-                    // stream ditutup pas proses di-destroy, abaikan
-                }
+                try { p.inputStream.bufferedReader().forEachLine { gameLog.add(it) } }
+                catch (_: java.io.IOException) { }
+            }
+            thread(name = "omp-wait", isDaemon = true) {
                 val code = runCatching { p.waitFor() }.getOrDefault(-1)
                 gameLog.add("[panel] ${type.binary} berhenti (exit $code)")
-                gameProc = null
-                gameStdin = null
-                gameState.value = RunState.STOPPED
+                if (gameProc === p) {            // jangan timpa proses baru (race saat restart)
+                    gameProc = null
+                    gameStdin = null
+                    gameState.value = RunState.STOPPED
+                }
             }
         } catch (e: Throwable) {
             gameLog.add("[panel] Gagal start: ${e.message}")
             gameState.value = RunState.STOPPED
         }
-    }
+    } }
 
-    suspend fun stopGame(): Unit = withContext(Dispatchers.IO) {
-        val p = gameProc ?: run { gameState.value = RunState.STOPPED; return@withContext }
+    suspend fun stopGame(): Unit = withContext(Dispatchers.IO) { gameLock.withLock {
+        val p = gameProc ?: run { gameState.value = RunState.STOPPED; return@withLock }
         gameState.value = RunState.STOPPING
-        if (runningType == ServerType.SAMP) runCatching { rcon("exit") }
-        else runCatching { gameStdin?.apply { write("exit\n"); flush() } }
-        if (!p.waitFor(8, TimeUnit.SECONDS)) {
-            p.destroy()
-            if (!p.waitFor(5, TimeUnit.SECONDS)) p.destroyForcibly()
+        // catat anak proses (qemu / samp03svr) SEBELUM proot dimatikan
+        val kids = pidOf(p)?.let { descendantsOf(it) }.orEmpty()
+        try {
+            if (runningType == ServerType.SAMP) runCatching { rcon("exit") }
+            else runCatching { gameStdin?.apply { write("exit\n"); flush() } }
+            if (!p.waitFor(8, TimeUnit.SECONDS)) {
+                p.destroy()
+                if (!p.waitFor(5, TimeUnit.SECONDS)) p.destroyForcibly()
+            }
+            p.waitFor(3, TimeUnit.SECONDS)
+        } finally {
+            // bunuh sisa proses yang masih hidup, kalau nggak port 7777 tetap kepakai
+            kids.forEach { if (File("/proc/$it").exists()) android.os.Process.killProcess(it) }
+            if (gameProc === p) { gameProc = null; gameStdin = null }
+            gameState.value = RunState.STOPPED
         }
+    } }
+
+    private fun descendantsOf(root: Int): List<Int> {
+        val kids = HashMap<Int, MutableList<Int>>()
+        File("/proc").listFiles()?.forEach { f ->
+            val pid = f.name.toIntOrNull() ?: return@forEach
+            val ppid = runCatching {
+                File(f, "stat").readText().substringAfterLast(')').trim().split(' ')[1].toInt()
+            }.getOrNull() ?: return@forEach
+            kids.getOrPut(ppid) { mutableListOf() }.add(pid)
+        }
+        val out = mutableListOf<Int>()
+        val q = ArrayDeque(listOf(root))
+        while (q.isNotEmpty()) {
+            kids[q.removeFirst()]?.forEach { out.add(it); q.add(it) }
+        }
+        return out
     }
 
     fun sendStdin(line: String) {
@@ -228,9 +260,12 @@ object Controller {
     suspend fun stopDb(): Unit = withContext(Dispatchers.IO) {
         if (dbState.value == RunState.STOPPED) return@withContext
         dbState.value = RunState.STOPPING
-        MariaDb.stopPhpMyAdmin()
-        MariaDb.stop()
-        dbState.value = RunState.STOPPED
+        try {
+            MariaDb.stopPhpMyAdmin()
+            MariaDb.stop()
+        } finally {
+            dbState.value = RunState.STOPPED
+        }
     }
 
     suspend fun startAll() {
@@ -242,8 +277,7 @@ object Controller {
     }
 
     suspend fun stopAll() {
-        stopGame()
-        stopDb()
+        try { stopGame() } finally { stopDb() }
     }
 
     private fun runSetup(title: String, onFinish: (Throwable?) -> Unit = {}, block: () -> Unit) {
