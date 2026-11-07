@@ -128,7 +128,7 @@ object Controller {
             thread(name = "omp-wait", isDaemon = true) {
                 val code = runCatching { p.waitFor() }.getOrDefault(-1)
                 gameLog.add("[panel] ${type.binary} berhenti (exit $code)")
-                if (gameProc === p) {            // jangan timpa proses baru (race saat restart)
+                if (gameProc === p) {
                     gameProc = null
                     gameStdin = null
                     gameState.value = RunState.STOPPED
@@ -143,7 +143,6 @@ object Controller {
     suspend fun stopGame(): Unit = withContext(Dispatchers.IO) { gameLock.withLock {
         val p = gameProc ?: run { gameState.value = RunState.STOPPED; return@withLock }
         gameState.value = RunState.STOPPING
-        // catat anak proses (qemu / samp03svr) SEBELUM proot dimatikan
         val kids = pidOf(p)?.let { descendantsOf(it) }.orEmpty()
         try {
             if (runningType == ServerType.SAMP) runCatching { rcon("exit") }
@@ -154,7 +153,6 @@ object Controller {
             }
             p.waitFor(3, TimeUnit.SECONDS)
         } finally {
-            // bunuh sisa proses yang masih hidup, kalau nggak port 7777 tetap kepakai
             kids.forEach { if (File("/proc/$it").exists()) android.os.Process.killProcess(it) }
             if (gameProc === p) { gameProc = null; gameStdin = null }
             gameState.value = RunState.STOPPED
