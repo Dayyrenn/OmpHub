@@ -51,7 +51,6 @@ class OpenMpConfig(private val file: File) : ServerConfig {
         if (name !in legacyPlugins) legacyPlugins = legacyPlugins + name
     }
 
-    /** Ganti password RCON yang lemah. Return true bila diganti. */
     override fun ensureStrongRcon(): Boolean {
         val p = rconPassword
         val weak = p.length < 8 || p.lowercase() in WEAK
@@ -87,7 +86,6 @@ object OpenMpInstaller {
         }
     }
 
-    /** Pasang / update omp-server ke Env.serverDir. gamemodes, plugins, dan config.json tidak ditimpa. */
     fun install(url: String, log: (String) -> Unit) {
         val tmp = File(Env.files, "tmp_openmp")
         deleteTree(tmp)
@@ -127,7 +125,6 @@ object OpenMpInstaller {
         log("open.mp terpasang di ${Env.serverDir.absolutePath}")
     }
 
-    /** ZIP/restore menghilangkan bit executable; set ulang. */
     fun fixPerms() {
         listOf("omp-server", "samp03svr", "announce", "samp-npc").forEach { n ->
             File(Env.serverDir, n).takeIf { it.exists() }?.setExecutable(true, false)

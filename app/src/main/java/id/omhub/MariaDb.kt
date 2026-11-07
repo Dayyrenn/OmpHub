@@ -151,10 +151,6 @@ object MariaDb {
         }
     }
 
-    /**
-     * Menyiapkan phpMyAdmin lokal dengan akun administrator khusus.
-     * Server PHP hanya bind ke loopback, sehingga tidak diekspos ke jaringan luar.
-     */
     fun startPhpMyAdmin(onLine: (String) -> Unit = {}) {
         if (phpMyAdminProc?.isAlive == true && isPhpMyAdminRunning()) return
         check(phpMyAdminInstalled) { "phpMyAdmin belum terpasang. Pasang ulang komponen MariaDB melalui Setup." }
@@ -236,7 +232,6 @@ object MariaDb {
         return false
     }
 
-    /** Shutdown bersih dulu; kill hanya sebagai cadangan. */
     @Synchronized
     fun stop() {
         stopPhpMyAdmin()
@@ -258,7 +253,6 @@ object MariaDb {
         }.getOrNull()
     }
 
-    /** Buat database + user dengan password acak (sekali). Panggil saat server DB sudah hidup. */
     fun provision(database: String = "samp", user: String = "samp"): DbCredentials {
         loadCredentials()?.let { return it }
         val pass = randomToken(20)
@@ -279,13 +273,11 @@ object MariaDb {
 
     private fun q(s: String) = "'" + s.replace("'", "'\\''") + "'"
 
-    /** SQL sebagai root lewat unix socket di dalam rootfs DB. */
     fun exec(sql: String, database: String? = null): CmdResult {
         val db = database?.let { " ${q(it)}" } ?: ""
         return sh("mariadb -S $SOCK -uroot --table -e ${q(sql)}$db", 60)
     }
 
-    /** Hasil tab-separated untuk operasi database internal dan diagnostik. */
     fun query(sql: String, database: String? = null): CmdResult {
         val db = database?.let { " ${q(it)}" } ?: ""
         return sh("mariadb -S $SOCK -uroot --batch --raw --column-names -e ${q(sql)}$db", 60)
