@@ -26,7 +26,7 @@ class ServerService : Service() {
         const val ACTION_RESTART = "id.omphub.RESTART"
         const val ACTION_START_DB = "id.omphub.START_DB"
         const val ACTION_STOP_DB = "id.omphub.STOP_DB"
-        private const val CHANNEL = "ompanel"
+        private const val CHANNEL = "omphub"
         private const val NOTIF_ID = 1
 
         fun send(ctx: Context, action: String) {
@@ -47,7 +47,7 @@ class ServerService : Service() {
         startForeground(NOTIF_ID, notification("OmpHub aktif"))
         if (wake == null) {
             val pm = getSystemService(Context.POWER_SERVICE) as PowerManager
-            wake = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "ompanel:server").apply { acquire() }
+            wake = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "omphub:server").apply { acquire() }
         }
         watch()
         PerfMonitor.ensureStarted()

@@ -75,7 +75,7 @@ object Prefs {
     const val DEF_ALPINE =
         "https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/aarch64/alpine-minirootfs-3.20.3-aarch64.tar.gz"
 
-    private val sp get() = Env.ctx.getSharedPreferences("ompanel", Context.MODE_PRIVATE)
+    private val sp get() = Env.ctx.getSharedPreferences("omphub", Context.MODE_PRIVATE)
     private fun str(k: String, d: String) = sp.getString(k, d) ?: d
     private fun put(k: String, v: String) = sp.edit().putString(k, v).apply()
 
