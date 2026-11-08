@@ -7,7 +7,6 @@
 ### Diubah
 - Rootfs MariaDB (Alpine) mengikuti arsitektur perangkat (aarch64 atau armv7).
 - Build memakai binary proot, talloc, dan qemu sesuai ABI.
-- Workflow GitHub Actions diperbarui ke versi yang memakai Node.js 24 dan dikunci ke Ubuntu 24.04.
 
 ### Catatan
 - Pilih **arm64** untuk HP 64-bit, dan **armv7** hanya untuk HP 32-bit.
