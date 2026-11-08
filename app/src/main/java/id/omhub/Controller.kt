@@ -125,6 +125,11 @@ object Controller {
                 try { p.inputStream.bufferedReader().forEachLine { gameLog.add(it) } }
                 catch (_: java.io.IOException) { }
             }
+            if (type == ServerType.SAMP) {
+                thread(name = "samp-logtail", isDaemon = true) {
+                    tailFile(p, File(Env.serverDir, "server_log.txt"))
+                }
+            }
             thread(name = "omp-wait", isDaemon = true) {
                 val code = runCatching { p.waitFor() }.getOrDefault(-1)
                 gameLog.add("[panel] ${type.binary} berhenti (exit $code)")
@@ -139,6 +144,28 @@ object Controller {
             gameState.value = RunState.STOPPED
         }
     } }
+    
+    private fun tailFile(p: Process, file: File) {
+        var pos = if (file.exists()) file.length() else 0L
+        while (p.isAlive) {
+            try {
+                val len = if (file.exists()) file.length() else 0L
+                if (len < pos) pos = 0
+                if (len > pos) {
+                    java.io.RandomAccessFile(file, "r").use { r ->
+                        r.seek(pos)
+                        val buf = ByteArray((len - pos).toInt())
+                        r.readFully(buf)
+                        pos = len
+                        String(buf, Charsets.UTF_8).lines()
+                            .filter { it.isNotEmpty() }
+                            .forEach { gameLog.add(it) }
+                    }
+                }
+            } catch (_: Exception) { }
+            Thread.sleep(500)
+        }
+    }
 
     suspend fun stopGame(): Unit = withContext(Dispatchers.IO) { gameLock.withLock {
         val p = gameProc ?: run { gameState.value = RunState.STOPPED; return@withLock }
