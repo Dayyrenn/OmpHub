@@ -92,7 +92,7 @@ fun downloadFile(url: String, dest: File, onProgress: (done: Long, total: Long) 
     c.connectTimeout = 20_000
     c.readTimeout = 60_000
     c.instanceFollowRedirects = true
-    c.setRequestProperty("User-Agent", "OmpHub/1.0")
+    c.setRequestProperty("User-Agent", "OmpHub/${BuildConfig.VERSION_NAME}")
     try {
         val code = c.responseCode
         if (code !in 200..299) throw IOException("HTTP $code untuk $url")

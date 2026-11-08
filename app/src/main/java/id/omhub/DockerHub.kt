@@ -17,7 +17,7 @@ object DockerHub {
         val c = URL(url).openConnection() as HttpURLConnection
         c.connectTimeout = 20_000
         c.readTimeout = 60_000
-        c.setRequestProperty("User-Agent", "OmpHub/1.0")
+        c.setRequestProperty("User-Agent", "OmpHub/${BuildConfig.VERSION_NAME}")
         if (token != null) c.setRequestProperty("Authorization", "Bearer $token")
         if (accept != null) c.setRequestProperty("Accept", accept)
         try {
@@ -65,7 +65,7 @@ object DockerHub {
         c.instanceFollowRedirects = false
         c.connectTimeout = 20_000
         c.readTimeout = 60_000
-        c.setRequestProperty("User-Agent", "OmpHub/1.0")
+        c.setRequestProperty("User-Agent", "OmpHub/${BuildConfig.VERSION_NAME}")
         c.setRequestProperty("Authorization", "Bearer $token")
         val location: String
         try {
