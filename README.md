@@ -5,7 +5,7 @@ Panel untuk menjalankan server **open.mp** atau **SA-MP** (0.3.7 / 0.3.DL) beser
 Kelola server game, database, file, console, dan performa perangkat melalui satu aplikasi.
 
 ![Platform](https://img.shields.io/badge/platform-Android%208.0%2B%20(arm64%20%7C%20armv7)-3DDC84)
-![Version](https://img.shields.io/badge/version-1.1.4-blue)
+![Version](https://img.shields.io/badge/version-1.1.6-blue)
 
 Rootfs game dan MariaDB dibundel di dalam APK dan dipasang otomatis saat aplikasi pertama kali dibuka. Server game open.mp atau SA-MP dipasang sendiri oleh pengguna melalui tab Setup atau dengan mengunggah arsip server.
 
