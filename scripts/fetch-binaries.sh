@@ -132,7 +132,7 @@ ASSETS="$ROOT/app/src/main/assets"   # rootfs i386 + libatomic: sama untuk semua
 mkdir -p "$ASSETS"
 
 echo ">> Rootfs Debian i386 (bundel APK, dari Docker Hub)"
-REPO="i386/ubuntu"; TAG="bionic"
+REPO="i386/debian"; TAG="bookworm-slim"
 REG="https://registry-1.docker.io/v2/$REPO"
 ACCEPT="application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json"
 TOKEN=$(curl -fsSL "https://auth.docker.io/token?service=registry.docker.io&scope=repository:$REPO:pull" | jq -r .token)

@@ -352,7 +352,7 @@ object Controller {
             val dl = File(Env.dlDir, "rootfs-game.tar.gz")
             setupLog.add("Mengunduh i386/debian:bookworm-slim dari Docker Hub")
             var lastPct = -1
-            DockerHub.downloadRootfs("i386/ubuntu", "bionic", dl) { done, total ->
+            DockerHub.downloadRootfs("i386/debian", "bookworm-slim", dl) { done, total ->
                 if (total > 0) {
                     val pct = (done * 100 / total).toInt() / 20 * 20
                     if (pct != lastPct) { lastPct = pct; setupLog.add("  unduh $pct%") }
