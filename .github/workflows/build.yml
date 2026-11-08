@@ -2,7 +2,11 @@ name: build-apk
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   apk:
@@ -47,3 +51,30 @@ jobs:
         with:
           name: OmpHub-${{ matrix.abi }}-release
           path: app/build/outputs/apk/**/release/*.apk
+
+  release:
+    needs: apk
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: OmpHub-*-release
+          path: dist
+          merge-multiple: true
+      - name: Buat GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          find dist -name '*.apk' -print
+          bash scripts/release-notes.sh "$GITHUB_REF_NAME"
+          gh release create "$GITHUB_REF_NAME" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "$GITHUB_REF_NAME" \
+            --notes-file release-body.md \
+            $(find dist -name '*.apk')
