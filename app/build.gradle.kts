@@ -14,7 +14,22 @@ android {
         targetSdk = 35
         versionCode = 2
         versionName = "1.1.4"
-        ndk { abiFilters += "arm64-v8a" }
+    }
+
+    flavorDimensions += "abi"
+    productFlavors {
+        create("arm64") {
+            dimension = "abi"
+            versionCode = 22
+            ndk { abiFilters += "arm64-v8a" }
+            buildConfigField("String", "ALPINE_ARCH", "\"aarch64\"")
+        }
+        create("armv7") {
+            dimension = "abi"
+            versionCode = 21
+            ndk { abiFilters += "armeabi-v7a" }
+            buildConfigField("String", "ALPINE_ARCH", "\"armv7\"")
+        }
     }
 
     signingConfigs {
@@ -29,7 +44,10 @@ android {
         }
     }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        buildConfig = true
+    }
 
     androidResources { noCompress += listOf("xz", "gz") }
 

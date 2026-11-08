@@ -72,8 +72,9 @@ object Prefs {
         "https://sa-mp.co.id/files/samp037svr_R2-2-1.tar.gz"
     const val DEF_SAMP_DL =
         "https://sa-mp.co.id/files/samp03DLsvr_R1.tar.gz"
-    const val DEF_ALPINE =
-        "https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/aarch64/alpine-minirootfs-3.20.3-aarch64.tar.gz"
+    val DEF_ALPINE =
+        "https://dl-cdn.alpinelinux.org/alpine/v3.20/releases/${BuildConfig.ALPINE_ARCH}/" +
+            "alpine-minirootfs-3.20.3-${BuildConfig.ALPINE_ARCH}.tar.gz"
 
     private val sp get() = Env.ctx.getSharedPreferences("omphub", Context.MODE_PRIVATE)
     private fun str(k: String, d: String) = sp.getString(k, d) ?: d

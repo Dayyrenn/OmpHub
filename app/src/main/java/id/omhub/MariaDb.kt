@@ -47,7 +47,7 @@ object MariaDb {
                 bundled.delete()
             } else {
                 val tgz = File(Env.dlDir, archiveNameFor("alpine", url))
-                log("Mengunduh Alpine arm64...")
+                log("Mengunduh Alpine ${BuildConfig.ALPINE_ARCH}...")
                 var lastPct = -1
                 downloadFile(url, tgz) { done, total ->
                     if (total > 0) {

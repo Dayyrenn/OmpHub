@@ -1,7 +1,16 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-DEST="$ROOT/app/src/main/jniLibs/arm64-v8a"
+
+ABI="${1:-${ABI:-arm64}}"
+case "$ABI" in
+  arm64) JNI_ABI="arm64-v8a";   TERMUX_ARCH="aarch64"; DEB_ARCH="arm64"; ELF_CLASS="02"; ELF_MACH="b7"; FILE_ARCH="aarch64" ;;
+  armv7) JNI_ABI="armeabi-v7a"; TERMUX_ARCH="arm";     DEB_ARCH="armhf"; ELF_CLASS="01"; ELF_MACH="28"; FILE_ARCH="ARM" ;;
+  *) echo "ABI harus arm64 atau armv7 (dapat: $ABI)"; exit 1 ;;
+esac
+echo ">> Target ABI: $ABI ($JNI_ABI)"
+
+DEST="$ROOT/app/src/$ABI/jniLibs/$JNI_ABI"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 mkdir -p "$DEST"
@@ -11,8 +20,8 @@ for t in curl ar tar awk find od perl xz jq; do
 done
 
 TERMUX="https://packages.termux.dev/apt/termux-main"
-echo ">> Mengambil indeks paket Termux (aarch64)"
-curl -fsSL "$TERMUX/dists/stable/main/binary-aarch64/Packages" -o "$WORK/Packages"
+echo ">> Mengambil indeks paket Termux ($TERMUX_ARCH)"
+curl -fsSL "$TERMUX/dists/stable/main/binary-$TERMUX_ARCH/Packages" -o "$WORK/Packages"
 
 termux_deb() {
   local pkg="$1" file
@@ -47,7 +56,7 @@ termux_deb libandroid-shmem
 S="$WORK/libandroid-shmem/data/data/com.termux/files/usr/lib"
 cp -L "$(ls "$S"/libandroid-shmem.so* | head -n1)" "$DEST/libandroid-shmem.so"
 
-echo ">> qemu-user-static (Debian arm64)"
+echo ">> qemu-user-static ($DEB_ARCH)"
 
 QEMU_SOURCE="${QEMU_SOURCE:-ubuntu}"
 case "$QEMU_SOURCE" in
@@ -57,7 +66,7 @@ case "$QEMU_SOURCE" in
   *) echo "QEMU_SOURCE harus debian atau ubuntu"; exit 1 ;;
 esac
 echo "   sumber: $QEMU_SOURCE ($BASE)"
-ALL=$(curl -fsSL "$BASE/" | grep -o 'qemu-user-static_[^"]*_arm64\.deb' | sort -uV | tac)
+ALL=$(curl -fsSL "$BASE/" | grep -o "qemu-user-static_[^\"]*_${DEB_ARCH}\\.deb" | sort -uV | tac)
 echo "   versi tersedia:"; echo "$ALL" | sed 's/^/     /'
 
 if [ -n "${QEMU_VERSION:-}" ]; then
@@ -68,9 +77,10 @@ else
 fi
 [ -n "$LIST" ] || { echo "qemu-user-static arm64 tidak ditemukan di $BASE"; exit 1; }
 
-is_arm64_elf() {
+is_target_elf() {
   [ "$(head -c4 "$1" 2>/dev/null | od -An -c | tr -d ' ')" = '177ELF' ] || return 1
-  [ "$(od -An -tx1 -j18 -N1 "$1" | tr -d ' ')" = "b7" ]
+  [ "$(od -An -tx1 -j4 -N1 "$1" | tr -d ' ')" = "$ELF_CLASS" ] || return 1
+  [ "$(od -An -tx1 -j18 -N1 "$1" | tr -d ' ')" = "$ELF_MACH" ]
 }
 
 resolve_in_root() {
@@ -99,7 +109,7 @@ for DEB in $LIST; do
 
   while IFS= read -r Q; do
     R=$(resolve_in_root "$Q" "$WORK/qemu")
-    if [ -f "$R" ] && is_arm64_elf "$R"; then
+    if [ -f "$R" ] && is_target_elf "$R"; then
       FOUND="$R"
       break
     fi
@@ -118,7 +128,7 @@ done
 [ -n "$FOUND" ] || { echo "Tidak ada paket qemu-user-static arm64 yang berisi binary qemu-i386 yang valid"; exit 1; }
 cp -L "$FOUND" "$DEST/libqemu-i386.so"
 
-ASSETS="$ROOT/app/src/main/assets"
+ASSETS="$ROOT/app/src/main/assets"   # rootfs i386 + libatomic: sama untuk semua ABI
 mkdir -p "$ASSETS"
 
 echo ">> Rootfs Debian i386 (bundel APK, dari Docker Hub)"
@@ -164,7 +174,7 @@ echo ">> Selesai:"
 ls -la "$DEST"
 
 if command -v file >/dev/null; then
-  echo; echo ">> Cek arsitektur (harus ARM aarch64):"
+  echo; echo ">> Cek arsitektur (harus $FILE_ARCH):"
   file "$DEST"/*.so
 fi
 

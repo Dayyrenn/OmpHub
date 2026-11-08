@@ -7,6 +7,14 @@ on:
 jobs:
   apk:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - abi: arm64
+            task: assembleArm64Release
+          - abi: armv7
+            task: assembleArmv7Release
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -17,12 +25,12 @@ jobs:
         env:
           QEMU_VERSION: "8.2.2"
           QEMU_SOURCE: "ubuntu"
-        run: bash scripts/fetch-binaries.sh
+        run: bash scripts/fetch-binaries.sh ${{ matrix.abi }}
       - uses: docker/setup-qemu-action@v3
         with:
-          platforms: arm64
-      - name: Bangun rootfs MariaDB (Alpine arm64)
-        run: bash scripts/build-mariadb-rootfs.sh
+          platforms: arm64,arm
+      - name: Bangun rootfs MariaDB (Alpine)
+        run: bash scripts/build-mariadb-rootfs.sh ${{ matrix.abi }}
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.9"
@@ -34,8 +42,8 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-        run: gradle :app:assembleRelease --no-daemon
+        run: gradle :app:${{ matrix.task }} --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: OmpHub-release
-          path: app/build/outputs/apk/release/*.apk
+          name: OmpHub-${{ matrix.abi }}-release
+          path: app/build/outputs/apk/**/release/*.apk

@@ -1,10 +1,10 @@
 # OmpHub
 
-Panel untuk menjalankan server **open.mp** atau **SA-MP** (0.3.7 / 0.3.DL) beserta **MariaDB** langsung dari HP Android (arm64), tanpa root.
+Panel untuk menjalankan server **open.mp** atau **SA-MP** (0.3.7 / 0.3.DL) beserta **MariaDB** langsung dari HP Android (arm64 atau armeabi-v7a/arm32), tanpa root.
 
 Kelola server game, database, file, console, dan performa perangkat melalui satu aplikasi.
 
-![Platform](https://img.shields.io/badge/platform-Android%208.0%2B%20(arm64)-3DDC84)
+![Platform](https://img.shields.io/badge/platform-Android%208.0%2B%20(arm64%20%7C%20armv7)-3DDC84)
 ![Version](https://img.shields.io/badge/version-1.1.4-blue)
 
 Rootfs game dan MariaDB dibundel di dalam APK dan dipasang otomatis saat aplikasi pertama kali dibuka. Server game open.mp atau SA-MP dipasang sendiri oleh pengguna melalui tab Setup atau dengan mengunggah arsip server.
@@ -83,7 +83,7 @@ Rootfs game dan MariaDB dibundel di dalam APK dan dipasang otomatis saat aplikas
 | Item | Keterangan |
 |---|---|
 | Android | 8.0 (API 26) atau lebih baru |
-| Arsitektur | arm64-v8a |
+| Arsitektur | arm64-v8a, armeabi-v7a (APK terpisah per ABI) |
 | Root | Tidak perlu |
 | Ruang kosong | Sekitar 1 GB atau lebih |
 | Internet | Diperlukan untuk mengunduh server game |
@@ -285,7 +285,7 @@ Poin penting:
 
 ## Batasan dan Catatan Penting
 
-1. OmpHub ditujukan untuk perangkat Android arm64.
+1. OmpHub ditujukan untuk perangkat Android arm64. Build armeabi-v7a (arm32) tersedia tetapi masih eksperimental: emulasi i386 di CPU 32-bit lebih lambat dan batas RAM/address space 32-bit lebih ketat.
 2. Server game berjalan melalui emulasi QEMU sehingga performanya bergantung pada perangkat.
 3. Performa dapat berbeda berdasarkan merek HP, versi Android, dan kebijakan sistem.
 4. MariaDB hanya listen pada `127.0.0.1`.
@@ -302,3 +302,16 @@ OmpHub menggunakan dan/atau mendistribusikan berbagai komponen pihak ketiga, ter
 Setiap komponen memiliki lisensi masing-masing. Informasi lebih lanjut dapat dilihat pada [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 Proyek ini tidak berafiliasi dengan open.mp, Rockstar Games, atau Take-Two Interactive.
+
+
+## Build per ABI
+
+```bash
+# arm64
+bash scripts/fetch-binaries.sh arm64 && bash scripts/build-mariadb-rootfs.sh arm64
+gradle :app:assembleArm64Release
+
+# arm32 (armeabi-v7a)
+bash scripts/fetch-binaries.sh armv7 && bash scripts/build-mariadb-rootfs.sh armv7
+gradle :app:assembleArmv7Release
+```

@@ -65,7 +65,7 @@ fun deleteTree(root: File) {
     if (!Files.exists(p, java.nio.file.LinkOption.NOFOLLOW_LINKS)) return
     Files.walkFileTree(p, object : SimpleFileVisitor<Path>() {
         override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
-            chmodSafe(dir.toString(), 448) // 0700
+            chmodSafe(dir.toString(), 448)
             return FileVisitResult.CONTINUE
         }
         override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
